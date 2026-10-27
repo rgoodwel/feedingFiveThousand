@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 import { sampleProjects, type Project, type Meal, type MealItem, type VisibilityMode, type FoodCategory, type MealCategory } from './data/sampleData'
+import { loadProjects, persistProjects } from './lib/projectService'
 import { hasSupabaseConfig } from './lib/supabase'
 
-const STORAGE_KEY = 'feeding-five-thousand-projects'
 const ADMIN_KEY = 'feeding-five-thousand-admin'
 
 const mealCategoryOptions: MealCategory[] = ['breakfast', 'lunch', 'dinner']
@@ -38,17 +38,8 @@ const defaultItemForm = {
   personResponsible: '',
 }
 
-const loadProjects = (): Project[] => {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    return saved ? JSON.parse(saved) : sampleProjects
-  } catch {
-    return sampleProjects
-  }
-}
-
 function App() {
-  const [projects, setProjects] = useState<Project[]>(loadProjects)
+  const [projects, setProjects] = useState<Project[]>(sampleProjects)
   const [selectedProjectId, setSelectedProjectId] = useState<string>(sampleProjects[0]?.id ?? '')
   const [projectForm, setProjectForm] = useState(defaultProjectForm)
   const [mealForm, setMealForm] = useState(defaultMealForm)
@@ -71,8 +62,25 @@ function App() {
   const [deleteStep, setDeleteStep] = useState(0)
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(projects))
+    void persistProjects(projects)
   }, [projects])
+
+  useEffect(() => {
+    let mounted = true
+
+    const hydrate = async () => {
+      const savedProjects = await loadProjects()
+      if (!mounted) return
+      setProjects(savedProjects)
+      setSelectedProjectId(savedProjects[0]?.id ?? '')
+    }
+
+    void hydrate()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   useEffect(() => {
     localStorage.setItem(ADMIN_KEY, String(adminMode))
@@ -175,6 +183,7 @@ function App() {
       attendeeCount: mealForm.attendeeCount,
       dietarySummary: mealForm.dietarySummary.trim(),
       status: mealForm.status,
+      assignedAttendeeIds: [],
       items: [],
     }
 
@@ -716,6 +725,23 @@ function App() {
                             <option value="needs-volunteers">Needs volunteers</option>
                             <option value="confirmed">Confirmed</option>
                             <option value="complete">Complete</option>
+                          </select>
+                        </label>
+                        <label className="full-width">
+                          <span>Assigned attendees</span>
+                          <select
+                            multiple
+                            value={meal.assignedAttendeeIds}
+                            onChange={(event) => {
+                              const selected = Array.from(event.target.selectedOptions, (option) => option.value)
+                              updateMeal(meal.id, { assignedAttendeeIds: selected })
+                            }}
+                          >
+                            {selectedProject.attendees.map((attendee) => (
+                              <option key={attendee.id} value={attendee.id}>
+                                {attendee.name}
+                              </option>
+                            ))}
                           </select>
                         </label>
                         <label className="full-width">

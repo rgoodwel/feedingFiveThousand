@@ -25,6 +25,7 @@ export interface Meal {
   attendeeCount: number;
   dietarySummary: string;
   status: 'planned' | 'needs-volunteers' | 'confirmed' | 'complete';
+  assignedAttendeeIds: string[];
   items: MealItem[];
 }
 
@@ -67,6 +68,7 @@ export const sampleProjects: Project[] = [
         attendeeCount: 4,
         dietarySummary: 'Vegetarian and gluten-free options required.',
         status: 'confirmed',
+        assignedAttendeeIds: ['att-1', 'att-2', 'att-3', 'att-4'],
         items: [
           {
             id: 'item-1',
@@ -93,6 +95,7 @@ export const sampleProjects: Project[] = [
         attendeeCount: 5,
         dietarySummary: 'One vegan guest and one nut-free guest.',
         status: 'needs-volunteers',
+        assignedAttendeeIds: ['att-1', 'att-2', 'att-3', 'att-4'],
         items: [
           {
             id: 'item-3',
@@ -126,6 +129,7 @@ export const sampleProjects: Project[] = [
         attendeeCount: 3,
         dietarySummary: 'Two vegetarian guests and one shellfish-free guest.',
         status: 'planned',
+        assignedAttendeeIds: ['att-5', 'att-6', 'att-7'],
         items: [
           {
             id: 'item-4',
