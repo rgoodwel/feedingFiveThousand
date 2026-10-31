@@ -1,9 +1,9 @@
 import { supabase } from './supabase';
-import { sampleProjects, type Project } from '../data/sampleData';
+import { sampleProjects, type AgeGroup, type Project } from '../data/sampleData';
 
 const STORAGE_KEY = 'feeding-five-thousand-projects';
 
-const normalizeProject = (project: Record<string, any>): Project => ({
+const normalizeProjectBase = (project: Record<string, any>): Project => ({
   id: String(project.id ?? crypto.randomUUID()),
   name: String(project.name ?? 'Untitled project'),
   description: String(project.description ?? ''),
@@ -11,15 +11,22 @@ const normalizeProject = (project: Record<string, any>): Project => ({
   password: project.password ?? project.password_hash ?? undefined,
   attendees:
     Array.isArray(project.attendees)
-      ? project.attendees.map((attendee: Record<string, any>) => ({
+      ? project.attendees.map((attendee: Record<string, any>) => {
+        // legacy rows only have a single `name`
+        const [legacyFirst = 'Guest', ...legacyRest] = String(attendee.name ?? '').trim().split(/\s+/)
+        const ageGroup = attendee.ageGroup ?? attendee.age_group
+        return {
           id: String(attendee.id ?? crypto.randomUUID()),
-          name: String(attendee.name ?? 'Guest'),
+          firstName: String(attendee.firstName ?? attendee.first_name ?? legacyFirst),
+          lastName: String(attendee.lastName ?? attendee.last_name ?? legacyRest.join(' ')),
+          ageGroup: (['toddler', 'kid', 'adult'].includes(ageGroup) ? ageGroup : 'adult') as AgeGroup,
           dietaryRestrictions: Array.isArray(attendee.dietaryRestrictions)
             ? attendee.dietaryRestrictions.map((item) => String(item))
             : Array.isArray(attendee.dietary_restrictions)
               ? attendee.dietary_restrictions.map((item: string) => String(item))
               : ['none'],
-        }))
+        }
+      })
       : [],
   meals:
     Array.isArray(project.meals)
@@ -31,7 +38,6 @@ const normalizeProject = (project: Record<string, any>): Project => ({
           category: (meal.category as Project['meals'][number]['category']) ?? 'lunch',
           attendeeCount: Number(meal.attendeeCount ?? 0),
           dietarySummary: String(meal.dietarySummary ?? ''),
-          status: (meal.status as Project['meals'][number]['status']) ?? 'planned',
           assignedAttendeeIds: Array.isArray(meal.assignedAttendeeIds)
             ? meal.assignedAttendeeIds.map((item: string | number) => String(item))
             : [],
@@ -41,12 +47,31 @@ const normalizeProject = (project: Record<string, any>): Project => ({
                 name: String(item.name ?? 'Food item'),
                 description: String(item.description ?? ''),
                 category: (item.category as Project['meals'][number]['items'][number]['category']) ?? 'main',
-                personResponsible: String(item.personResponsible ?? 'TBD'),
+                personResponsible: String(item.personResponsible ?? ''),
               }))
             : [],
         }))
       : [],
 });
+
+// Responsible person is stored as an attendee id; legacy rows held a free-text name.
+const normalizeProject = (project: Record<string, any>): Project => {
+  const base = normalizeProjectBase(project);
+  const resolve = (value: string) => {
+    const match =
+      base.attendees.find((a) => a.id === value) ??
+      base.attendees.find((a) => value && [a.firstName, `${a.firstName} ${a.lastName}`].includes(value));
+    return match?.id ?? '';
+  };
+  return {
+    ...base,
+    meals: base.meals.map((meal) => ({
+      ...meal,
+      attendeeCount: meal.assignedAttendeeIds.length,
+      items: meal.items.map((item) => ({ ...item, personResponsible: resolve(item.personResponsible) })),
+    })),
+  };
+};
 
 export async function loadProjects(): Promise<Project[]> {
   if (supabase) {
@@ -124,7 +149,10 @@ export async function persistProjects(projects: Project[]) {
       const attendeeRows = project.attendees.map((attendee) => ({
         id: attendee.id,
         project_id: project.id,
-        name: attendee.name,
+        name: `${attendee.firstName} ${attendee.lastName}`.trim(),
+        first_name: attendee.firstName,
+        last_name: attendee.lastName,
+        age_group: attendee.ageGroup,
         dietary_restrictions: attendee.dietaryRestrictions,
       }))
       await supabase.from('attendees').upsert(attendeeRows)
@@ -139,7 +167,6 @@ export async function persistProjects(projects: Project[]) {
           category: meal.category,
           attendee_count: meal.attendeeCount,
           dietary_summary: meal.dietarySummary,
-          status: meal.status,
           assigned_attendee_ids: meal.assignedAttendeeIds,
         })
 

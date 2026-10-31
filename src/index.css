@@ -1,15 +1,13 @@
 :root {
-  font-family: Inter, 'Segoe UI', sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-  color: #e2e8f0;
-  background:
-    radial-gradient(circle at top, rgba(249, 115, 22, 0.15), transparent 25%),
-    linear-gradient(180deg, #020817 0%, #0f172a 100%);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --bg: #f5f1e8;
+  --card: #ffffff;
+  --panel-soft: #fbfaf6;
+  --muted: #6a707a;
+  --accent: #1f3d5c;
+  --danger: #b24a3a;
+  --success: #2f7d48;
+  --border: rgba(20, 40, 60, 0.14);
+  --ink: #1b2430;
 }
 
 * {
@@ -24,6 +22,9 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: var(--ink);
+  background: linear-gradient(180deg, #f8f6f0 0%, var(--bg) 100%);
 }
 
 button,

@@ -15,9 +15,17 @@ create table if not exists attendees (
   id uuid primary key default gen_random_uuid(),
   project_id uuid not null references projects(id) on delete cascade,
   name text not null,
+  first_name text not null default '',
+  last_name text not null default '',
+  age_group text not null default 'adult' check (age_group in ('toddler', 'kid', 'adult')),
   dietary_restrictions text[] not null default '{}',
   created_at timestamptz not null default now()
 );
+
+-- upgrade path for databases created before first/last name and age group existed
+alter table attendees add column if not exists first_name text not null default '';
+alter table attendees add column if not exists last_name text not null default '';
+alter table attendees add column if not exists age_group text not null default 'adult' check (age_group in ('toddler', 'kid', 'adult'));
 
 create table if not exists meals (
   id uuid primary key default gen_random_uuid(),
