@@ -1230,3 +1230,407 @@ textarea {
     grid-template-columns: 1fr;
   }
 }
+
+/* Phones: lists stay compact table rows; new-item/new-guest rows become a roomy form */
+@media (max-width: 700px) {
+  .app-shell {
+    overflow-x: hidden;
+  }
+
+  .items-table,
+  .items-table .MuiTableBody-root {
+    display: block;
+    width: 100%;
+    border-spacing: 0;
+  }
+
+  .items-table .MuiTableHead-root {
+    display: none;
+  }
+
+  .items-table .MuiTableBody-root .MuiTableRow-root {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 40px;
+    gap: 4px 8px;
+    align-items: center;
+    padding: 8px 4px;
+    margin: 0;
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .items-table .MuiTableBody-root .MuiTableRow-root > .MuiTableCell-root {
+    display: block;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .items-table .MuiTableCell-root:empty {
+    display: none;
+  }
+
+  .items-table .MuiTableCell-root[data-actions] {
+    grid-column: 3;
+    grid-row: 1;
+    width: auto;
+    text-align: right;
+  }
+
+  .items-table .MuiInputBase-root {
+    min-height: 36px;
+    padding: 2px 6px;
+  }
+
+  .items-table .MuiInputBase-root .MuiInputBase-input {
+    font-size: 15px;
+  }
+
+  .items-table .MuiIconButton-root {
+    opacity: 1;
+    padding: 6px;
+  }
+
+  /* meal items: name + delete, category + responsible, description */
+  .meal-items-table .MuiTableCell-root[data-label='Item'] { grid-column: 1 / 3; grid-row: 1; }
+  .meal-items-table .MuiTableCell-root[data-label='Category'] { grid-column: 1; grid-row: 2; }
+  .meal-items-table .MuiTableCell-root[data-label='Responsible'] { grid-column: 2 / 4; grid-row: 2; }
+  .meal-items-table .MuiTableCell-root[data-label='Item Description'] { grid-column: 1 / -1; grid-row: 3; }
+
+  /* event guests: names + delete, then age group + dietary */
+  .event-guests-table .MuiTableCell-root[data-label='First name'] { grid-column: 1; grid-row: 1; }
+  .event-guests-table .MuiTableCell-root[data-label='Last name'] { grid-column: 2; grid-row: 1; }
+  .event-guests-table .MuiTableCell-root[data-label='Age group'] { grid-column: 1; grid-row: 2; }
+  .event-guests-table .MuiTableCell-root[data-label='Dietary requests'] { grid-column: 2 / 4; grid-row: 2; }
+
+  /* meal guests */
+  .meal-guests-table .MuiTableCell-root[data-label='Guest'] { grid-column: 1 / 3; grid-row: 1; font-weight: 600; }
+  .meal-guests-table .MuiTableCell-root[data-label='Age group'] { grid-column: 1; grid-row: 2; font-size: 0.9rem; color: var(--muted); }
+  .meal-guests-table .MuiTableCell-root[data-label='Dietary requests'] { grid-column: 2 / 4; grid-row: 2; }
+
+  /* past meals keep small captions above their values */
+  .past-meals-table .MuiTableBody-root .MuiTableRow-root {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .past-meals-table .MuiTableCell-root[data-label='Meal'] { grid-column: 1 / -1; grid-row: auto; padding-right: 28px; }
+  .past-meals-table .MuiTableCell-root[data-label='When'],
+  .past-meals-table .MuiTableCell-root[data-label='Guests'],
+  .past-meals-table .MuiTableCell-root[data-label='Items'] { grid-column: auto; grid-row: auto; }
+  .past-meals-table .MuiTableCell-root[data-actions] { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); grid-column: auto; grid-row: auto; }
+  .past-meals-table .MuiTableBody-root .MuiTableRow-root { position: relative; }
+
+  .past-meals-table .MuiTableCell-root[data-label]:not([data-label='Meal'])::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 0.64rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* guest picker, course headings and "+ New" rows */
+  .items-table .guest-picker-row {
+    background: #e8f0fe !important;
+    border-radius: 10px;
+    border: 1px solid #c5d6f7;
+    margin: 6px 0;
+    padding: 10px;
+    grid-template-columns: 1fr;
+  }
+
+  .items-table .guest-picker-row > .MuiTableCell-root { grid-column: 1 !important; grid-row: auto !important; }
+
+  .items-table .course-row {
+    display: block;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .items-table .course-row td {
+    padding: 6px 4px;
+  }
+
+  .items-table .MuiTableRow-root:has(> .MuiTableCell-root[colspan]):not(.course-row) {
+    display: block;
+    background: rgba(31, 61, 92, 0.06);
+    border: 0;
+    border-radius: 10px;
+    margin-bottom: 6px;
+    padding: 12px;
+  }
+
+  .items-table .MuiTableRow-root:has(> .MuiTableCell-root[colspan]):not(.course-row) > .MuiTableCell-root {
+    grid-column: auto;
+  }
+
+  /* draft rows: a tinted form card with large fields and full-width actions */
+  .items-table .MuiTableBody-root .draft-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    padding: 14px;
+    margin: 6px 0 12px;
+    background: #f3f7fd;
+    border: 1px solid #c5d6f7;
+    border-radius: 14px;
+  }
+
+  .items-table .draft-row > .MuiTableCell-root[data-label] {
+    grid-column: 1 / -1;
+    grid-row: auto;
+    font-weight: 400;
+    font-size: 1rem;
+    color: inherit;
+  }
+
+  .items-table .draft-row > .MuiTableCell-root[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .meal-items-table .draft-row > .MuiTableCell-root[data-label='Category'],
+  .meal-items-table .draft-row > .MuiTableCell-root[data-label='Responsible'],
+  .event-guests-table .draft-row > .MuiTableCell-root[data-label='First name'],
+  .event-guests-table .draft-row > .MuiTableCell-root[data-label='Last name'],
+  .meal-guests-table .draft-row > .MuiTableCell-root[data-label='Age group'] {
+    grid-column: auto;
+  }
+
+  .items-table .draft-row .MuiInputBase-root {
+    min-height: 46px;
+    padding: 6px 12px;
+    background: #fff;
+    border: 1px solid #c9d3df;
+    border-radius: 10px;
+  }
+
+  .items-table .draft-row .MuiInputBase-root .MuiInputBase-input {
+    font-size: 16px;
+  }
+
+  .items-table .draft-row > .MuiTableCell-root[data-actions] {
+    grid-column: 1 / -1;
+    grid-row: auto;
+    order: 99;
+    display: flex;
+    gap: 10px;
+  }
+
+  .items-table .draft-row [data-actions] .MuiIconButton-root {
+    flex: 1;
+    height: 46px;
+    border-radius: 10px;
+    gap: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    background: #fff;
+    border: 1px solid #c9d3df;
+    color: var(--ink);
+  }
+
+  .items-table .draft-row [data-actions] .MuiIconButton-root:first-child {
+    background: var(--primary, #1f3d5c);
+    border-color: transparent;
+    color: #fff;
+    order: 2;
+    flex: 2;
+  }
+
+  .items-table .draft-row [data-actions] .MuiIconButton-root:first-child.Mui-disabled {
+    background: #d5dbe3;
+    color: #8a94a3;
+  }
+
+  .items-table .draft-row [data-actions] .MuiIconButton-root:first-child::after { content: 'Save'; }
+  .items-table .draft-row [data-actions] .MuiIconButton-root:last-child::after { content: 'Cancel'; }
+}
+
+@media (max-width: 700px) {
+  .project-header-row,
+  .meal-header-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  /* back + tour buttons share one row under the title */
+  .project-actions {
+    width: 100%;
+    margin-left: 0;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+  }
+
+  .project-actions .MuiButton-root {
+    white-space: nowrap;
+  }
+
+  .project-actions .secondary-button {
+    margin-left: auto;
+  }
+
+}
+
+@media (max-width: 700px) {
+  .items-table .draft-row .MuiInputBase-root {
+    width: 100%;
+  }
+
+  .meal-items-table .draft-row > .MuiTableCell-root[data-label='Responsible'] { order: 3; }
+  .meal-items-table .draft-row > .MuiTableCell-root[data-label='Item Description'] { order: 4; }
+
+  .items-table .draft-row [data-actions] .MuiIconButton-root:first-child.Mui-disabled {
+    background: #d5dbe3 !important;
+    color: #7b8696 !important;
+  }
+}
+
+@media (max-width: 700px) {
+  .items-table .MuiTableBody-root .draft-row > .MuiTableCell-root {
+    background: transparent !important;
+  }
+}
+
+/* Phones: saved rows show only the essentials (new-item/new-guest forms keep every field) */
+@media (max-width: 700px) {
+  .meal-items-table .MuiTableBody-root .MuiTableRow-root:not(.draft-row):not(.course-row):not(:has(> [colspan])) > .MuiTableCell-root[data-label='Category'],
+  .meal-items-table .MuiTableBody-root .MuiTableRow-root:not(.draft-row):not(.course-row):not(:has(> [colspan])) > .MuiTableCell-root[data-label='Item Description'],
+  .event-guests-table .MuiTableBody-root .MuiTableRow-root:not(.draft-row):not(:has(> [colspan])) > .MuiTableCell-root[data-label='Age group'],
+  .event-guests-table .MuiTableBody-root .MuiTableRow-root:not(.draft-row):not(:has(> [colspan])) > .MuiTableCell-root[data-label='Dietary requests'],
+  .meal-guests-table .MuiTableBody-root .MuiTableRow-root:not(.draft-row):not(.guest-picker-row) > .MuiTableCell-root[data-label='Age group'],
+  .meal-guests-table .MuiTableBody-root .MuiTableRow-root:not(.draft-row):not(.guest-picker-row) > .MuiTableCell-root[data-label='Dietary requests'] {
+    display: none;
+  }
+
+  .meal-items-table .MuiTableBody-root .MuiTableRow-root:not(.draft-row) > .MuiTableCell-root[data-label='Item'] { grid-column: 1; grid-row: 1; }
+  .meal-items-table .MuiTableBody-root .MuiTableRow-root:not(.draft-row) > .MuiTableCell-root[data-label='Responsible'] { grid-column: 2; grid-row: 1; }
+  .meal-guests-table .MuiTableBody-root .MuiTableRow-root:not(.draft-row):not(.guest-picker-row) > .MuiTableCell-root[data-label='Guest'] { grid-column: 1 / 3; grid-row: 1; }
+}
+
+.row-info-button {
+  display: none !important;
+}
+
+@media (max-width: 700px) {
+  .items-table .row-info-button {
+    display: inline-flex !important;
+    color: var(--muted);
+  }
+
+  .items-table .row-expanded .row-info-button {
+    color: #1f3d5c;
+    background: rgba(31, 61, 92, 0.1);
+  }
+
+  .items-table .MuiTableCell-root[data-actions] {
+    white-space: nowrap;
+  }
+
+  .items-table .MuiTableBody-root .MuiTableRow-root > .MuiTableCell-root[data-actions] {
+    grid-column: 3;
+    min-width: 76px;
+  }
+
+  .items-table .MuiTableBody-root .MuiTableRow-root {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  }
+
+  /* expanded rows reveal the hidden fields with captions */
+  .row-expanded > .MuiTableCell-root[data-label]:not([data-label='Item']):not([data-label='Responsible']):not([data-label='First name']):not([data-label='Last name']):not([data-label='Guest']) {
+    display: block !important;
+  }
+
+  .row-expanded > .MuiTableCell-root[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 2px;
+    font-size: 0.64rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .row-expanded > .MuiTableCell-root[data-label='Item'],
+  .row-expanded > .MuiTableCell-root[data-label='Responsible'],
+  .row-expanded > .MuiTableCell-root[data-label='First name'],
+  .row-expanded > .MuiTableCell-root[data-label='Last name'],
+  .row-expanded > .MuiTableCell-root[data-label='Guest'] {
+    grid-row: 1;
+  }
+
+  .row-expanded > .MuiTableCell-root[data-label='Category'],
+  .row-expanded > .MuiTableCell-root[data-label='Age group'] { grid-column: 1; grid-row: 2; }
+  .row-expanded > .MuiTableCell-root[data-label='Dietary requests'] { grid-column: 2 / 4; grid-row: 2; }
+  .meal-items-table .row-expanded > .MuiTableCell-root[data-label='Item Description'] { grid-column: 1 / -1; grid-row: 3; }
+
+  .row-expanded {
+    background: #f6f9fd !important;
+  }
+}
+
+@media (max-width: 700px) {
+  .items-table .MuiTableBody-root .row-expanded > .MuiTableCell-root {
+    background: transparent !important;
+    border-radius: 0 !important;
+  }
+
+  .items-table .row-expanded {
+    padding-bottom: 12px !important;
+    gap: 8px 8px !important;
+  }
+
+  .items-table .row-expanded .MuiInputBase-root {
+    min-height: 40px;
+    background: #fff;
+    border: 1px solid #d5dde8;
+    border-radius: 8px;
+  }
+
+  .meal-items-table .row-expanded > .MuiTableCell-root[data-label='Category'] { grid-column: 1 / 3; }
+  .items-table .row-expanded > .MuiTableCell-root[data-label='Age group'] { grid-column: 1 / 3; }
+  .items-table .row-expanded > .MuiTableCell-root[data-label='Dietary requests'] { grid-column: 1 / -1; grid-row: 3; }
+  .meal-items-table .row-expanded > .MuiTableCell-root[data-label='Item Description'] { grid-row: 4; }
+}
+
+.name-short {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .items-table .meal-items-table .name-full,
+  .meal-items-table .MuiTableBody-root .MuiTableRow-root:not(.draft-row) .name-full {
+    display: none;
+  }
+
+  .meal-items-table .MuiTableBody-root .MuiTableRow-root:not(.draft-row) .name-short {
+    display: inline;
+  }
+
+  /* more room for the item name now that the responsible column is short */
+  .meal-items-table .MuiTableBody-root .MuiTableRow-root:not(.draft-row):not(.row-expanded) {
+    grid-template-columns: minmax(0, 1fr) 84px auto;
+  }
+}
+
+@media (max-width: 700px) {
+  .meal-items-table .MuiTableBody-root .MuiTableRow-root:not(.draft-row):not(.row-expanded) {
+    grid-template-columns: minmax(0, 1fr) 96px auto;
+  }
+
+  .meal-items-table .MuiTableRow-root:not(.draft-row):not(.row-expanded) .MuiSelect-icon {
+    display: none;
+  }
+
+  .meal-items-table .MuiTableRow-root:not(.draft-row):not(.row-expanded) .MuiSelect-select {
+    padding-right: 0 !important;
+  }
+}

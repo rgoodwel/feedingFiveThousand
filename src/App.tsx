@@ -26,6 +26,7 @@ import AddIcon from '@mui/icons-material/Add'
 import CheckIcon from '@mui/icons-material/Check'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import CloseIcon from '@mui/icons-material/Close'
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import HelpOutlineIcon from '@mui/icons-material/HelpOutlineOutlined'
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined'
 import TextField from '@mui/material/TextField'
@@ -175,6 +176,14 @@ function App() {
     itemId?: string
   } | null>(null)
   const [deleteStep, setDeleteStep] = useState(0)
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
+  const toggleRow = (id: string) =>
+    setExpandedRows((current) => {
+      const next = new Set(current)
+      if (!next.delete(id)) next.add(id)
+      return next
+    })
+  const [guestRemoval, setGuestRemoval] = useState<{ scope: 'event' | 'meal'; guestId: string } | null>(null)
   const [showCreateEventForm, setShowCreateEventForm] = useState(false)
   const [draftAttendee, setDraftAttendee] = useState<AttendeeDraft | null>(null)
   const [showMealForm, setShowMealForm] = useState(false)
@@ -602,6 +611,27 @@ function App() {
     setDeleteStep(0)
   }
 
+  const guestRemovalTarget = guestRemoval
+    ? selectedProject?.attendees.find((a) => a.id === guestRemoval.guestId)
+    : undefined
+
+  const confirmGuestRemoval = () => {
+    if (!guestRemoval || !guestRemovalTarget) {
+      setGuestRemoval(null)
+      return
+    }
+
+    if (guestRemoval.scope === 'event') {
+      removeAttendee(guestRemoval.guestId)
+    } else if (selectedMeal) {
+      setMealAttendees(
+        selectedMeal.id,
+        selectedMeal.assignedAttendeeIds.filter((id) => id !== guestRemoval.guestId),
+      )
+    }
+    setGuestRemoval(null)
+  }
+
   const unlockProject = () => {
     if (!selectedProject) return
     const expectedPassword = selectedProject.password ?? ''
@@ -654,6 +684,29 @@ function App() {
             </Button>
             <Button type="button" variant="contained" color="error" onClick={confirmDelete}>
               {deleteStep === 1 ? 'Confirm delete' : 'Delete now'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
+
+      {guestRemoval && guestRemovalTarget && (
+        <Dialog open onClose={() => setGuestRemoval(null)} maxWidth="xs" fullWidth>
+          <DialogTitle>
+            {guestRemoval.scope === 'event' ? 'Remove guest from event?' : 'Remove guest from meal?'}
+          </DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              {guestRemoval.scope === 'event'
+                ? `${guestRemovalTarget.firstName} ${guestRemovalTarget.lastName} will be removed from this event and from every meal. Items they are responsible for will become unassigned.`
+                : `${guestRemovalTarget.firstName} ${guestRemovalTarget.lastName} will be removed from this meal only. Items they are responsible for will become unassigned.`}
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
+            <Button type="button" variant="outlined" color="primary" onClick={() => setGuestRemoval(null)}>
+              Cancel
+            </Button>
+            <Button type="button" variant="contained" color="error" onClick={confirmGuestRemoval} autoFocus>
+              Remove guest
             </Button>
           </DialogActions>
         </Dialog>
@@ -1075,7 +1128,7 @@ function App() {
 
             {showAttendees && (
               <TableContainer>
-                <Table size="small" className="items-table">
+                <Table size="small" className="items-table event-guests-table">
                   <TableHead>
                     <TableRow>
                       <TableCell sx={{ width: '18%' }}>First name</TableCell>
@@ -1087,7 +1140,7 @@ function App() {
                   </TableHead>
                   <TableBody>
                     {draftAttendee ? (
-                      <TableRow
+                      <TableRow className="draft-row"
                         onKeyDown={(event) => {
                           if (event.key === 'Enter') {
                             event.preventDefault()
@@ -1097,7 +1150,7 @@ function App() {
                           }
                         }}
                       >
-                        <TableCell>
+                        <TableCell data-label="First name">
                           <TextField
                             {...inlineFieldProps}
                             autoFocus
@@ -1107,7 +1160,7 @@ function App() {
                             onChange={(event) => setDraftAttendee((current) => current && { ...current, firstName: event.target.value })}
                           />
                         </TableCell>
-                        <TableCell>
+                        <TableCell data-label="Last name">
                           <TextField
                             {...inlineFieldProps}
                             required
@@ -1116,7 +1169,7 @@ function App() {
                             onChange={(event) => setDraftAttendee((current) => current && { ...current, lastName: event.target.value })}
                           />
                         </TableCell>
-                        <TableCell>
+                        <TableCell data-label="Age group">
                           <TextField
                             {...inlineFieldProps}
                             select
@@ -1137,7 +1190,7 @@ function App() {
                             ))}
                           </TextField>
                         </TableCell>
-                        <TableCell>
+                        <TableCell data-label="Dietary requests">
                           <DietaryField
                             {...inlineFieldProps}
                             required
@@ -1147,7 +1200,7 @@ function App() {
                             }
                           />
                         </TableCell>
-                        <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                        <TableCell data-actions="true" align="right" sx={{ whiteSpace: 'nowrap' }}>
                           <IconButton
                             size="small"
                             color="primary"
@@ -1175,8 +1228,8 @@ function App() {
                     {selectedProject.attendees.map((attendee) => {
                       const fullName = `${attendee.firstName} ${attendee.lastName}`.trim()
                       return (
-                        <TableRow key={attendee.id} hover>
-                          <TableCell>
+                        <TableRow key={attendee.id} hover className={expandedRows.has(attendee.id) ? 'row-expanded' : undefined}>
+                          <TableCell data-label="First name">
                             <TextField
                               {...inlineFieldProps}
                               required
@@ -1187,7 +1240,7 @@ function App() {
                               slotProps={{ ...inlineFieldProps.slotProps, htmlInput: { 'aria-label': `First name for ${fullName}` } }}
                             />
                           </TableCell>
-                          <TableCell>
+                          <TableCell data-label="Last name">
                             <TextField
                               {...inlineFieldProps}
                               required
@@ -1198,7 +1251,7 @@ function App() {
                               slotProps={{ ...inlineFieldProps.slotProps, htmlInput: { 'aria-label': `Last name for ${fullName}` } }}
                             />
                           </TableCell>
-                          <TableCell>
+                          <TableCell data-label="Age group">
                             <TextField
                               {...inlineFieldProps}
                               select
@@ -1213,7 +1266,7 @@ function App() {
                               ))}
                             </TextField>
                           </TableCell>
-                          <TableCell>
+                          <TableCell data-label="Dietary requests">
                             <DietaryField
                               {...inlineFieldProps}
                               required
@@ -1223,8 +1276,17 @@ function App() {
                               slotProps={{ ...inlineFieldProps.slotProps, htmlInput: { 'aria-label': `Dietary requests for ${fullName}` } }}
                             />
                           </TableCell>
-                          <TableCell align="right">
-                            <IconButton size="small" aria-label={`Remove ${fullName}`} onClick={() => removeAttendee(attendee.id)}>
+                          <TableCell data-actions="true" align="right">
+                            <IconButton
+                              className="row-info-button"
+                              size="small"
+                              aria-label={`Show details for ${fullName}`}
+                              aria-expanded={expandedRows.has(attendee.id)}
+                              onClick={() => toggleRow(attendee.id)}
+                            >
+                              <InfoOutlinedIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton size="small" aria-label={`Remove ${fullName}`} onClick={() => setGuestRemoval({ scope: 'event', guestId: attendee.id })}>
                               <DeleteOutlinedIcon fontSize="small" />
                             </IconButton>
                           </TableCell>
@@ -1272,11 +1334,11 @@ function App() {
                             onClick={() => openMeal(selectedProject.id, meal.id)}
                             onKeyDown={(event) => event.key === 'Enter' && openMeal(selectedProject.id, meal.id)}
                           >
-                            <TableCell>
+                            <TableCell data-label="Meal">
                               <span className="past-meal-title">{meal.title}</span>
                               <Chip size="small" label={meal.category} className="past-meal-chip" />
                             </TableCell>
-                            <TableCell>
+                            <TableCell data-label="When">
                               {new Date(`${meal.date}T00:00`).toLocaleDateString(undefined, {
                                 weekday: 'short',
                                 month: 'short',
@@ -1285,9 +1347,9 @@ function App() {
                               })}
                               {meal.startTime ? ` · ${meal.startTime}` : ''}
                             </TableCell>
-                            <TableCell>{meal.assignedAttendeeIds.length}</TableCell>
-                            <TableCell>{meal.items.length}</TableCell>
-                            <TableCell align="right">
+                            <TableCell data-label="Guests">{meal.assignedAttendeeIds.length}</TableCell>
+                            <TableCell data-label="Items">{meal.items.length}</TableCell>
+                            <TableCell data-actions="true" align="right">
                               <ChevronRightIcon fontSize="small" className="past-meal-chevron" />
                             </TableCell>
                           </TableRow>
@@ -1336,7 +1398,7 @@ function App() {
             </div>
 
             <TableContainer data-tour="meal-items-table">
-              <Table size="small" className="items-table">
+              <Table size="small" className="items-table meal-items-table">
                 <TableHead>
                   <TableRow>
                     <TableCell sx={{ width: '22%' }}>Item</TableCell>
@@ -1348,7 +1410,7 @@ function App() {
                 </TableHead>
                 <TableBody>
                   {showMealItemForm ? (
-                    <TableRow
+                    <TableRow className="draft-row"
                       onKeyDown={(event) => {
                         if (event.key === 'Enter') {
                           event.preventDefault()
@@ -1358,7 +1420,7 @@ function App() {
                         }
                       }}
                     >
-                      <TableCell>
+                      <TableCell data-label="Item">
                         <TextField
                           {...inlineFieldProps}
                           autoFocus
@@ -1367,7 +1429,7 @@ function App() {
                           onChange={(event) => setMealItemForm((current) => ({ ...current, name: event.target.value }))}
                         />
                       </TableCell>
-                      <TableCell>
+                      <TableCell data-label="Category">
                         <TextField
                           {...inlineFieldProps}
                           select
@@ -1388,7 +1450,7 @@ function App() {
                           ))}
                         </TextField>
                       </TableCell>
-                      <TableCell>
+                      <TableCell data-label="Item Description">
                         <TextField
                           {...inlineFieldProps}
                           value={mealItemForm.description}
@@ -1398,7 +1460,7 @@ function App() {
                           }
                         />
                       </TableCell>
-                      <TableCell>
+                      <TableCell data-label="Responsible">
                         <TextField
                           {...inlineFieldProps}
                           select
@@ -1418,7 +1480,7 @@ function App() {
                           ))}
                         </TextField>
                       </TableCell>
-                      <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                      <TableCell data-actions="true" align="right" sx={{ whiteSpace: 'nowrap' }}>
                         <IconButton
                           size="small"
                           color="primary"
@@ -1452,8 +1514,8 @@ function App() {
                           <TableCell colSpan={5}>{group.label}</TableCell>
                         </TableRow>
                         {groupItems.map((item) => (
-                    <TableRow key={item.id} hover>
-                      <TableCell>
+                    <TableRow key={item.id} hover className={expandedRows.has(item.id) ? 'row-expanded' : undefined}>
+                      <TableCell data-label="Item">
                         <TextField
                           {...inlineFieldProps}
                           value={item.name}
@@ -1461,7 +1523,7 @@ function App() {
                           onChange={(event) => updateMealItem(selectedMeal.id, item.id, { name: event.target.value })}
                         />
                       </TableCell>
-                      <TableCell>
+                      <TableCell data-label="Category">
                         <TextField
                           {...inlineFieldProps}
                           select
@@ -1477,7 +1539,7 @@ function App() {
                           ))}
                         </TextField>
                       </TableCell>
-                      <TableCell>
+                      <TableCell data-label="Item Description">
                         <TextField
                           {...inlineFieldProps}
                           value={item.description}
@@ -1487,13 +1549,29 @@ function App() {
                           }
                         />
                       </TableCell>
-                      <TableCell>
+                      <TableCell data-label="Responsible">
                         <TextField
                           {...inlineFieldProps}
                           select
                           value={item.personResponsible}
                           onChange={(event) => updateMealItem(selectedMeal.id, item.id, { personResponsible: event.target.value })}
-                          slotProps={{ ...inlineFieldProps.slotProps, select: { displayEmpty: true } }}
+                          slotProps={{
+                            ...inlineFieldProps.slotProps,
+                            select: {
+                              displayEmpty: true,
+                              renderValue: (value) => {
+                                const guest = selectedProject.attendees.find((attendee) => attendee.id === value)
+                                if (!guest) return <em>Unassigned</em>
+                                const initial = guest.lastName.trim().charAt(0)
+                                return (
+                                  <>
+                                    <span className="name-full">{guest.firstName} {guest.lastName}</span>
+                                    <span className="name-short">{guest.firstName}{initial ? ` ${initial}.` : ''}</span>
+                                  </>
+                                )
+                              },
+                            },
+                          }}
                         >
                           <MenuItem value="">
                             <em>Unassigned</em>
@@ -1506,7 +1584,17 @@ function App() {
                           ))}
                         </TextField>
                       </TableCell>
-                      <TableCell align="right">
+                      <TableCell data-actions="true" align="right">
+                        <IconButton
+                              className="row-info-button"
+                              size="small"
+                              aria-label={`Show details for ${item.name || 'item'}`}
+                              aria-expanded={expandedRows.has(item.id)}
+                              onClick={() => toggleRow(item.id)}
+                            >
+                              <InfoOutlinedIcon fontSize="small" />
+                            </IconButton>
+                            
                         <IconButton
                           size="small"
                           aria-label={`Remove ${item.name}`}
@@ -1530,7 +1618,7 @@ function App() {
               Attending guests ({mealAttendees.length} of {selectedProject.attendees.length} Event Guests)
             </Typography>
             <TableContainer data-tour="meal-attending-table">
-              <Table size="small" className="items-table">
+              <Table size="small" className="items-table meal-guests-table">
                 <TableHead>
                   <TableRow>
                     <TableCell sx={{ width: '30%' }}>Guest</TableCell>
@@ -1541,7 +1629,7 @@ function App() {
                 </TableHead>
                 <TableBody>
                   {mealGuestDraft ? (
-                    <TableRow
+                    <TableRow className="draft-row"
                       onKeyDown={(event) => {
                         if (event.key === 'Enter') {
                           event.preventDefault()
@@ -1551,7 +1639,7 @@ function App() {
                         }
                       }}
                     >
-                      <TableCell>
+                      <TableCell data-label="Guest">
                         <Box sx={{ display: 'flex', gap: 1 }}>
                           <TextField
                             {...inlineFieldProps}
@@ -1570,7 +1658,7 @@ function App() {
                           />
                         </Box>
                       </TableCell>
-                      <TableCell>
+                      <TableCell data-label="Age group">
                         <TextField
                           {...inlineFieldProps}
                           select
@@ -1591,7 +1679,7 @@ function App() {
                           ))}
                         </TextField>
                       </TableCell>
-                      <TableCell>
+                      <TableCell data-label="Dietary requests">
                         <DietaryField
                           {...inlineFieldProps}
                           required
@@ -1599,7 +1687,7 @@ function App() {
                           onChange={(next) => setMealGuestDraft((c) => c && { ...c, dietaryText: next.join(', ') })}
                         />
                       </TableCell>
-                      <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                      <TableCell data-actions="true" align="right" sx={{ whiteSpace: 'nowrap' }}>
                         <IconButton
                           size="small"
                           color="primary"
@@ -1620,7 +1708,7 @@ function App() {
                       data-tour="meal-add-guest"
                       onKeyDown={(event) => event.key === 'Escape' && closeGuestPicker()}
                     >
-                      <TableCell>
+                      <TableCell data-label="Guest">
                         <TextField
                           {...inlineFieldProps}
                           select
@@ -1690,7 +1778,7 @@ function App() {
                         </TextField>
                       </TableCell>
                       <TableCell colSpan={2} />
-                      <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                      <TableCell data-actions="true" align="right" sx={{ whiteSpace: 'nowrap' }}>
                         <IconButton
                           size="small"
                           color="primary"
@@ -1711,8 +1799,8 @@ function App() {
                   )}
 
                   {mealAttendees.map((attendee) => (
-                    <TableRow key={attendee.id} hover>
-                      <TableCell>
+                    <TableRow key={attendee.id} hover className={expandedRows.has(`meal-${attendee.id}`) ? 'row-expanded' : undefined}>
+                      <TableCell data-label="Guest">
                         <TextField
                           {...inlineFieldProps}
                           select
@@ -1727,18 +1815,22 @@ function App() {
                           ))}
                         </TextField>
                       </TableCell>
-                      <TableCell sx={{ textTransform: 'capitalize' }}>{attendee.ageGroup}</TableCell>
-                      <TableCell>{attendee.dietaryRestrictions.join(', ')}</TableCell>
-                      <TableCell align="right">
+                      <TableCell data-label="Age group" sx={{ textTransform: 'capitalize' }}>{attendee.ageGroup}</TableCell>
+                      <TableCell data-label="Dietary requests">{attendee.dietaryRestrictions.join(', ')}</TableCell>
+                      <TableCell data-actions="true" align="right">
                         <IconButton
+                              className="row-info-button"
+                              size="small"
+                              aria-label={`Show details for ${attendee.firstName} ${attendee.lastName}`}
+                              aria-expanded={expandedRows.has(`meal-${attendee.id}`)}
+                              onClick={() => toggleRow(`meal-${attendee.id}`)}
+                            >
+                              <InfoOutlinedIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton
                           size="small"
                           aria-label={`Remove ${attendee.firstName} ${attendee.lastName} from meal`}
-                          onClick={() =>
-                            setMealAttendees(
-                              selectedMeal.id,
-                              selectedMeal.assignedAttendeeIds.filter((id) => id !== attendee.id),
-                            )
-                          }
+                          onClick={() => setGuestRemoval({ scope: 'meal', guestId: attendee.id })}
                         >
                           <DeleteOutlinedIcon fontSize="small" />
                         </IconButton>
