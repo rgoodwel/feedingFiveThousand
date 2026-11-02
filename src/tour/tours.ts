@@ -29,7 +29,7 @@ export const tours: Record<TourView, DriveStep[]> = {
       element: '.project-card .event-card-footer',
       popover: {
         title: 'Event at a glance',
-        description: 'See how many people are coming and how many meals are upcoming or already past.',
+        description: 'See how many guests are coming and how many meals are upcoming or already past.',
       },
     },
   ],
@@ -53,7 +53,7 @@ export const tours: Record<TourView, DriveStep[]> = {
       popover: {
         title: 'Add a guest',
         description:
-          'Click "+ New attendee", then fill in first name, last name, age group and dietary requests (type "none" if there are none). Press Enter to save or Esc to cancel. Edit any guest by clicking into their row.',
+          'Click "+ New guest", then fill in first name, last name, age group and dietary requests (pick "none" if there are none). Press Enter to save or Esc to cancel. Edit any guest by clicking into their row.',
       },
     },
     {
@@ -67,7 +67,7 @@ export const tours: Record<TourView, DriveStep[]> = {
       element: '[data-tour="event-meal-tile"]',
       popover: {
         title: 'Open a meal',
-        description: 'Click a meal to build its menu and manage who is attending.',
+        description: 'Click a meal to build its menu and manage its guests.',
       },
     },
     {
@@ -106,7 +106,7 @@ export const tours: Record<TourView, DriveStep[]> = {
       element: '[data-tour="meal-items-table"] thead th:nth-child(4)',
       popover: {
         title: 'Who is bringing it?',
-        description: "The person responsible is chosen from this meal's attending guests, so add guests first.",
+        description: "Pick anyone from the event. If they aren't attending this meal yet, they're added to its guest list automatically.",
       },
     },
     {
@@ -114,7 +114,7 @@ export const tours: Record<TourView, DriveStep[]> = {
       popover: {
         title: 'Update attending guests',
         description:
-          'Use "Add guest" to add one person from the event list, or "Add all event guests" to include everyone.',
+          'Open this dropdown to tick one or more event guests, choose "Select all guests", or add a brand-new guest, then confirm with the blue button.',
       },
     },
     {

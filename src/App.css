@@ -1083,3 +1083,150 @@ textarea {
   transform: translateY(0);
   box-shadow: 0 2px 6px rgba(20, 40, 60, 0.12);
 }
+
+.items-table .guest-picker-row > td {
+  background: #e8f0fe;
+  border-bottom: 1px solid #c5d6f7;
+}
+
+.items-table .guest-picker-row > td:first-child {
+  border-radius: 8px 0 0 8px;
+}
+
+.items-table .guest-picker-row > td:last-child {
+  border-radius: 0 8px 8px 0;
+}
+
+.guest-picker-row .MuiSelect-select {
+  color: #1a56c4;
+  font-weight: 600;
+}
+
+.MuiMenuItem-root.guest-picker-done {
+  position: sticky;
+  bottom: 0;
+  justify-content: center;
+  margin: 4px 8px 4px;
+  border-radius: 8px;
+  background: #1a56c4;
+  color: #fff;
+  font-weight: 600;
+}
+
+.MuiMenuItem-root.guest-picker-done:hover {
+  background: #1547a3;
+}
+
+.MuiMenuItem-root.guest-picker-done.Mui-disabled {
+  background: #e5e7eb;
+  color: #6b7280;
+  opacity: 1;
+}
+
+.past-meals-table .past-meal-table-row {
+  cursor: pointer;
+}
+
+.past-meals-table .past-meal-chip {
+  margin-left: 10px;
+  height: 20px;
+  font-size: 0.72rem;
+  text-transform: capitalize;
+  background: #eef2f7;
+  color: var(--muted);
+}
+
+.past-meals-table .past-meal-chevron {
+  color: var(--muted);
+  opacity: 0.4;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.past-meals-table .past-meal-table-row:hover .past-meal-chevron {
+  opacity: 1;
+  transform: translateX(3px);
+}
+
+.MuiAutocomplete-paper,
+.MuiMenu-paper,
+.MuiPopover-paper.MuiMenu-paper {
+  background: #fff !important;
+  border: 1px solid #c5d0de;
+  border-radius: 12px !important;
+  box-shadow: 0 12px 32px rgba(20, 40, 60, 0.22), 0 2px 6px rgba(20, 40, 60, 0.12) !important;
+}
+
+.MuiAutocomplete-listbox .MuiAutocomplete-option[aria-selected='true'],
+.MuiMenu-paper .MuiMenuItem-root.Mui-selected {
+  background: #e8f0fe;
+}
+
+.MuiAutocomplete-listbox .MuiAutocomplete-option.Mui-focused,
+.MuiMenu-paper .MuiMenuItem-root:hover {
+  background: #f1f5fb;
+}
+
+.create-event-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 640px;
+  padding: 16px;
+  background: #f6f8fb;
+  border: 1px solid #dbe3ee;
+  border-radius: 14px;
+}
+
+.create-event-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.create-event-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.create-event-fields .MuiOutlinedInput-root {
+  background: #fff;
+}
+
+.create-event-fields .create-event-description {
+  grid-column: 1 / -1;
+}
+
+.create-event-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+@media (max-width: 640px) {
+  .create-event-fields {
+    grid-template-columns: 1fr;
+  }
+}
+
+.create-event-fields .create-event-wide {
+  grid-column: 1 / -1;
+}
+
+.meal-create-fields {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.meal-create-form {
+  margin-top: 12px;
+}
+
+.meal-create-fields .MuiAutocomplete-inputRoot {
+  background: #fff;
+}
+
+@media (max-width: 640px) {
+  .meal-create-fields {
+    grid-template-columns: 1fr;
+  }
+}

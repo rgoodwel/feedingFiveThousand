@@ -7,8 +7,9 @@ const normalizeProjectBase = (project: Record<string, any>): Project => ({
   id: String(project.id ?? crypto.randomUUID()),
   name: String(project.name ?? 'Untitled project'),
   description: String(project.description ?? ''),
-  visibility: (project.visibility as Project['visibility']) ?? 'public',
-  password: project.password ?? project.password_hash ?? undefined,
+  // visibility options are disabled for now: every event is public
+  visibility: 'public',
+  password: undefined,
   attendees:
     Array.isArray(project.attendees)
       ? project.attendees.map((attendee: Record<string, any>) => {

@@ -4,9 +4,9 @@ import type { TourView } from './tour/tours'
 import Autocomplete from '@mui/material/Autocomplete'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import ButtonBase from '@mui/material/ButtonBase'
 import Card from '@mui/material/Card'
 import CardActionArea from '@mui/material/CardActionArea'
+import Checkbox from '@mui/material/Checkbox'
 import Chip from '@mui/material/Chip'
 import Dialog from '@mui/material/Dialog'
 import DialogActions from '@mui/material/DialogActions'
@@ -24,6 +24,7 @@ import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
 import AddIcon from '@mui/icons-material/Add'
 import CheckIcon from '@mui/icons-material/Check'
+import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import CloseIcon from '@mui/icons-material/Close'
 import HelpOutlineIcon from '@mui/icons-material/HelpOutlineOutlined'
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined'
@@ -38,7 +39,6 @@ import {
   type MealCategory,
   type Attendee,
   type AgeGroup,
-  type VisibilityMode,
   type FoodCategory,
 } from './data/sampleData'
 import { loadProjects, persistProjects } from './lib/projectService'
@@ -61,7 +61,8 @@ const parseDietary = (text: string) =>
 const isDraftComplete = (draft: AttendeeDraft) =>
   Boolean(draft.firstName.trim() && draft.lastName.trim() && draft.ageGroup && parseDietary(draft.dietaryText).length)
 
-// Keeps raw text locally so typing commas/spaces isn't mangled by re-parsing on every keystroke.
+const dietaryOptions = ['vegetarian', 'vegan', 'gluten-free', 'nut-free', 'dairy-free']
+
 function DietaryField({
   value,
   onChange,
@@ -70,18 +71,54 @@ function DietaryField({
   value: string[]
   onChange: (value: string[]) => void
 } & Omit<React.ComponentProps<typeof TextField>, 'value' | 'onChange'>) {
-  const [text, setText] = useState(value.join(', '))
+  // keep older free-text values visible and removable
+  const extras = value.filter((v) => v !== 'none' && !dietaryOptions.includes(v))
+  const options = ['none', ...dietaryOptions, ...extras]
+
   return (
     <TextField
       {...rest}
-      value={text}
+      select
+      value={value}
       onChange={(event) => {
-        setText(event.target.value)
-        onChange(parseDietary(event.target.value))
+        const next = event.target.value as unknown as string[]
+        const picked = next.find((v) => !value.includes(v))
+        // "none" is exclusive
+        onChange(picked === 'none' ? ['none'] : next.filter((v) => v !== 'none'))
       }}
-    />
+      slotProps={{
+        ...rest.slotProps,
+        select: {
+          multiple: true,
+          displayEmpty: true,
+          renderValue: (selected) =>
+            (selected as string[]).length === 0 ? 'Select…' : (selected as string[]).join(', '),
+        },
+      }}
+    >
+      {options.map((option) => (
+        <MenuItem key={option} value={option} sx={{ textTransform: 'capitalize' }}>
+          <Checkbox size="small" checked={value.includes(option)} sx={{ p: 0.5, mr: 1 }} />
+          {option}
+        </MenuItem>
+      ))}
+    </TextField>
   )
 }
+
+// Anyone chosen as responsible for an item is added to the meal's guest list.
+const withResponsibleAttending = (meal: Meal, attendeeId?: string): Meal =>
+  !attendeeId || meal.assignedAttendeeIds.includes(attendeeId)
+    ? meal
+    : {
+        ...meal,
+        assignedAttendeeIds: [...meal.assignedAttendeeIds, attendeeId],
+        attendeeCount: meal.assignedAttendeeIds.length + 1,
+      }
+
+const NEW_GUEST_OPTION = '__new_guest__'
+const SELECT_ALL_OPTION = '__select_all__'
+const DONE_OPTION = '__done__'
 
 const courseGroups: { label: string; categories: FoodCategory[] }[] = [
   { label: 'Starters', categories: ['drink', 'app'] },
@@ -90,11 +127,6 @@ const courseGroups: { label: string; categories: FoodCategory[] }[] = [
   { label: 'Desserts', categories: ['dessert'] },
 ]
 const foodCategoryOptions: FoodCategory[] = ['drink', 'app', 'salad', 'main', 'side', 'dessert']
-const visibilityOptions: { value: VisibilityMode; label: string }[] = [
-  { value: 'public', label: 'Fully public' },
-  { value: 'public-password', label: 'Public with password' },
-  { value: 'private-password', label: 'Private with password' },
-]
 
 const inlineFieldProps = {
   variant: 'standard' as const,
@@ -106,8 +138,7 @@ const inlineFieldProps = {
 const defaultProjectForm = {
   name: '',
   description: '',
-  visibility: 'public' as VisibilityMode,
-  password: '',
+  cloneFromId: '',
 }
 
 const mealCategoryOptions: MealCategory[] = ['breakfast', 'lunch', 'dinner']
@@ -115,15 +146,15 @@ const mealCategoryOptions: MealCategory[] = ['breakfast', 'lunch', 'dinner']
 const defaultMealForm = {
   title: '',
   date: '',
-  startTime: '12:00',
-  category: 'dinner' as MealCategory,
+  startTime: '',
+  category: '' as MealCategory | '',
   guestIds: [] as string[],
 }
 
 const defaultItemForm = {
   name: '',
   description: '',
-  category: 'main' as FoodCategory,
+  category: '' as FoodCategory | '',
   personResponsible: '',
 }
 
@@ -149,7 +180,9 @@ function App() {
   const [showMealForm, setShowMealForm] = useState(false)
   const [showMealItemForm, setShowMealItemForm] = useState(false)
   const [showAttendees, setShowAttendees] = useState(true)
-  const [addingGuest, setAddingGuest] = useState(false)
+  const [guestPickerOpen, setGuestPickerOpen] = useState(false)
+  const [pendingGuestIds, setPendingGuestIds] = useState<string[]>([])
+  const [mealGuestDraft, setMealGuestDraft] = useState<AttendeeDraft | null>(null)
 
   useEffect(() => {
     void persistProjects(projects)
@@ -257,13 +290,20 @@ function App() {
   const createProject = () => {
     if (!projectForm.name.trim()) return
 
+    const sourceProject = projects.find((project) => project.id === projectForm.cloneFromId)
+
     const newProject: Project = {
       id: `project-${Date.now()}`,
       name: projectForm.name.trim(),
       description: projectForm.description.trim(),
-      visibility: projectForm.visibility,
-      password: projectForm.visibility === 'public' ? undefined : projectForm.password.trim(),
-      attendees: [],
+      visibility: 'public',
+      attendees: sourceProject
+        ? sourceProject.attendees.map((a, index) => ({
+            ...a,
+            id: `att-${Date.now()}-${index}`,
+            dietaryRestrictions: [...a.dietaryRestrictions],
+          }))
+        : [],
       meals: [],
     }
 
@@ -299,6 +339,45 @@ function App() {
     )
 
     setDraftAttendee(null)
+  }
+
+  const saveMealGuestDraft = () => {
+    if (!selectedProject || !selectedMeal || !mealGuestDraft || !isDraftComplete(mealGuestDraft)) return
+
+    const nextAttendee: Attendee = {
+      id: `att-${Date.now()}`,
+      firstName: mealGuestDraft.firstName.trim(),
+      lastName: mealGuestDraft.lastName.trim(),
+      ageGroup: mealGuestDraft.ageGroup as AgeGroup,
+      dietaryRestrictions: parseDietary(mealGuestDraft.dietaryText),
+    }
+
+    setProjects((current) =>
+      current.map((project) =>
+        project.id !== selectedProject.id
+          ? project
+          : {
+              ...project,
+              attendees: [...project.attendees, nextAttendee],
+              meals: project.meals.map((meal) =>
+                meal.id !== selectedMeal.id
+                  ? meal
+                  : {
+                      ...meal,
+                      assignedAttendeeIds: [...meal.assignedAttendeeIds, nextAttendee.id],
+                      attendeeCount: meal.assignedAttendeeIds.length + 1,
+                    },
+              ),
+            },
+      ),
+    )
+
+    setMealGuestDraft(null)
+  }
+
+  const closeGuestPicker = () => {
+    setPendingGuestIds([])
+    setGuestPickerOpen(false)
   }
 
   const cancelDraftAttendee = () => {
@@ -381,7 +460,15 @@ function App() {
   }
 
   const addMeal = () => {
-    if (!selectedProject || !mealForm.title.trim() || !mealForm.date || mealForm.guestIds.length === 0) return
+    if (
+      !selectedProject ||
+      !mealForm.title.trim() ||
+      !mealForm.date ||
+      !mealForm.startTime ||
+      !mealForm.category ||
+      mealForm.guestIds.length === 0
+    )
+      return
 
     const newMeal: Meal = {
       id: `meal-${Date.now()}`,
@@ -406,7 +493,7 @@ function App() {
   }
 
   const addMealItem = (mealId: string) => {
-    if (!selectedProject || !mealItemForm.name.trim()) return
+    if (!selectedProject || !mealItemForm.name.trim() || !mealItemForm.category || !mealItemForm.personResponsible) return
 
     const nextItem: MealItem = {
       id: `item-${Date.now()}`,
@@ -423,7 +510,9 @@ function App() {
           : {
               ...project,
               meals: project.meals.map((meal) =>
-                meal.id === mealId ? { ...meal, items: [...meal.items, nextItem] } : meal,
+                meal.id === mealId
+                  ? { ...withResponsibleAttending(meal, nextItem.personResponsible), items: [...meal.items, nextItem] }
+                  : meal,
               ),
             },
       ),
@@ -450,7 +539,10 @@ function App() {
               meals: project.meals.map((meal) =>
                 meal.id !== mealId
                   ? meal
-                  : { ...meal, items: meal.items.map((item) => (item.id === itemId ? { ...item, ...patch } : item)) },
+                  : {
+                      ...withResponsibleAttending(meal, patch.personResponsible),
+                      items: meal.items.map((item) => (item.id === itemId ? { ...item, ...patch } : item)),
+                    },
               ),
             },
       ),
@@ -619,7 +711,7 @@ function App() {
                       <div className="event-card-footer">
                         <div>
                           <strong>{project.attendees.length}</strong>
-                          <span>People</span>
+                          <span>Guests</span>
                         </div>
                         <div>
                           <strong>{pastMeals}</strong>
@@ -627,7 +719,7 @@ function App() {
                         </div>
                         <div>
                           <strong>{upcomingMeals}</strong>
-                          <span>Upcoming</span>
+                          <span>Upcoming meals</span>
                         </div>
                       </div>
                     </CardActionArea>
@@ -637,80 +729,98 @@ function App() {
             </div>
           </Paper>
 
-          <Paper className="panel form-panel" elevation={0} sx={{ p: 2, borderRadius: 3 }}>
-            <div className="panel-header" style={{ justifyContent: 'flex-start' }}>
-              <Button
-                type="button"
-                variant="contained"
-                color="primary"
-                className="primary-button"
+          <Paper className="panel form-panel create-event-panel" elevation={0} sx={{ p: 2, borderRadius: 3 }}>
+            {!showCreateEventForm ? (
+              <div className="panel-header" style={{ justifyContent: 'flex-start' }}>
+                <Button
+                  type="button"
+                  variant="contained"
+                  color="primary"
+                  className="primary-button"
+                  data-tour="dash-create-event"
+                  startIcon={<AddIcon />}
+                  onClick={() => setShowCreateEventForm(true)}
+                >
+                  Create Event
+                </Button>
+              </div>
+            ) : (
+              <form
+                className="create-event-form"
                 data-tour="dash-create-event"
-                onClick={() => setShowCreateEventForm((current) => !current)}
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  createProject()
+                }}
               >
-                {showCreateEventForm ? 'Close' : 'Create Event'}
-              </Button>
-            </div>
+                <div className="create-event-header">
+                  <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                    New event
+                  </Typography>
+                  <IconButton size="small" aria-label="Close create event form" onClick={() => setShowCreateEventForm(false)}>
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                </div>
 
-            {showCreateEventForm && (
-              <>
-                <Box className="field-grid" sx={{ display: 'grid', gap: 1.5 }}>
+                <div className="create-event-fields">
                   <TextField
-                    label="Name"
+                    autoFocus
+                    required
+                    label="Event name"
                     value={projectForm.name}
                     onChange={(event) => setProjectForm((current) => ({ ...current, name: event.target.value }))}
                     placeholder="Spring picnic"
                     size="small"
+                    slotProps={{ htmlInput: { maxLength: 60 } }}
                   />
                   <TextField
                     select
-                    label="Visibility"
-                    value={projectForm.visibility}
-                    onChange={(event) =>
-                      setProjectForm((current) => ({
-                        ...current,
-                        visibility: event.target.value as VisibilityMode,
-                        password: event.target.value === 'public' ? '' : current.password,
-                      }))
-                    }
+                    label="Copy guests from a previous event (optional)"
+                    value={projectForm.cloneFromId}
+                    onChange={(event) => setProjectForm((current) => ({ ...current, cloneFromId: event.target.value }))}
                     size="small"
+                    disabled={projects.length === 0}
+                    slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}
                   >
-                    {visibilityOptions.map((option) => (
-                      <MenuItem key={option.value} value={option.value}>
-                        {option.label}
+                    <MenuItem value="">
+                      <em>Start with no guests</em>
+                    </MenuItem>
+                    {projects.map((project) => (
+                      <MenuItem key={project.id} value={project.id}>
+                        {project.name} ({project.attendees.length} {project.attendees.length === 1 ? 'guest' : 'guests'})
                       </MenuItem>
                     ))}
                   </TextField>
                   <TextField
-                    className="full-width"
-                    label="Description"
+                    className="create-event-description"
+                    label="Description (optional)"
                     value={projectForm.description}
-                    onChange={(event) =>
-                      setProjectForm((current) => ({ ...current, description: event.target.value }))
-                    }
-                    placeholder="Community meal plan and shared food signup"
+                    onChange={(event) => setProjectForm((current) => ({ ...current, description: event.target.value }))}
+                    placeholder="Short summary of the event"
                     multiline
-                    minRows={3}
+                    minRows={2}
+                    maxRows={2}
                     size="small"
+                    helperText={`${projectForm.description.length}/120`}
+                    slotProps={{ htmlInput: { maxLength: 120 } }}
                   />
-                  {projectForm.visibility !== 'public' && (
-                    <TextField
-                      className="full-width"
-                      label="Password"
-                      type="password"
-                      value={projectForm.password}
-                      onChange={(event) =>
-                        setProjectForm((current) => ({ ...current, password: event.target.value }))
-                      }
-                      placeholder="Event password"
-                      size="small"
-                    />
-                  )}
-                </Box>
+                </div>
 
-                <Button type="button" variant="contained" color="primary" className="primary-button" onClick={createProject}>
-                  Save event
-                </Button>
-              </>
+                <div className="create-event-actions">
+                  <Button type="button" onClick={() => setShowCreateEventForm(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    color="primary"
+                    className="primary-button"
+                    disabled={!projectForm.name.trim()}
+                  >
+                    Save event
+                  </Button>
+                </div>
+              </form>
             )}
           </Paper>
         </main>
@@ -800,79 +910,121 @@ function App() {
             </div>
 
             {showMealForm && (
-              <Box
-                component="form"
-                sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, alignItems: 'flex-end', mt: 1.5 }}
+              <form
+                className="create-event-form meal-create-form"
                 onSubmit={(event) => {
                   event.preventDefault()
                   addMeal()
                 }}
               >
-                <TextField
-                  size="small"
-                  variant="standard"
-                  required
-                  autoFocus
-                  label="Meal name"
-                  value={mealForm.title}
-                  onChange={(event) => setMealForm((current) => ({ ...current, title: event.target.value }))}
-                  sx={{ flex: '2 1 220px' }}
-                />
-                <TextField
-                  size="small"
-                  variant="standard"
-                  required
-                  type="date"
-                  label="Date"
-                  value={mealForm.date}
-                  onChange={(event) => setMealForm((current) => ({ ...current, date: event.target.value }))}
-                  slotProps={{ inputLabel: { shrink: true } }}
-                  sx={{ flex: '1 1 150px' }}
-                />
-                <TextField
-                  size="small"
-                  variant="standard"
-                  type="time"
-                  label="Start time"
-                  value={mealForm.startTime}
-                  onChange={(event) => setMealForm((current) => ({ ...current, startTime: event.target.value }))}
-                  slotProps={{ inputLabel: { shrink: true } }}
-                  sx={{ flex: '1 1 120px' }}
-                />
-                <TextField
-                  size="small"
-                  variant="standard"
-                  select
-                  label="Type"
-                  value={mealForm.category}
-                  onChange={(event) =>
-                    setMealForm((current) => ({ ...current, category: event.target.value as MealCategory }))
-                  }
-                  sx={{ flex: '1 1 130px', textTransform: 'capitalize' }}
-                >
-                  {mealCategoryOptions.map((option) => (
-                    <MenuItem key={option} value={option} sx={{ textTransform: 'capitalize' }}>
-                      {option}
+                <div className="create-event-header">
+                  <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                    New meal
+                  </Typography>
+                  <IconButton size="small" aria-label="Close meal form" onClick={() => setShowMealForm(false)}>
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                </div>
+
+                <div className="create-event-fields meal-create-fields">
+                  <TextField
+                    className="create-event-wide"
+                    size="small"
+                    required
+                    autoFocus
+                    label="Meal name"
+                    placeholder="Saturday dinner"
+                    value={mealForm.title}
+                    onChange={(event) => setMealForm((current) => ({ ...current, title: event.target.value }))}
+                    slotProps={{ htmlInput: { maxLength: 60 } }}
+                  />
+                  <TextField
+                    size="small"
+                    required
+                    type="date"
+                    label="Date"
+                    value={mealForm.date}
+                    onChange={(event) => setMealForm((current) => ({ ...current, date: event.target.value }))}
+                    slotProps={{ inputLabel: { shrink: true } }}
+                  />
+                  <TextField
+                    size="small"
+                    required
+                    type="time"
+                    label="Start time"
+                    value={mealForm.startTime}
+                    onChange={(event) => setMealForm((current) => ({ ...current, startTime: event.target.value }))}
+                    slotProps={{ inputLabel: { shrink: true } }}
+                  />
+                  <TextField
+                    size="small"
+                    select
+                    required
+                    label="Type"
+                    value={mealForm.category}
+                    onChange={(event) =>
+                      setMealForm((current) => ({ ...current, category: event.target.value as MealCategory }))
+                    }
+                    slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}
+                  >
+                    <MenuItem value="" disabled>
+                      Select type…
                     </MenuItem>
-                  ))}
-                </TextField>
+                    {mealCategoryOptions.map((option) => (
+                      <MenuItem key={option} value={option} sx={{ textTransform: 'capitalize' }}>
+                        {option}
+                      </MenuItem>
+                    ))}
+                  </TextField>
                 <Autocomplete
                   multiple
                   size="small"
                   disableCloseOnSelect
-                  options={selectedProject.attendees}
+                  options={
+                    selectedProject.attendees.length > 0
+                      ? [
+                          { id: SELECT_ALL_OPTION, firstName: 'Select all', lastName: 'guests', ageGroup: 'adult', dietaryRestrictions: [] } as Attendee,
+                          ...selectedProject.attendees,
+                        ]
+                      : []
+                  }
                   value={selectedProject.attendees.filter((a) => mealForm.guestIds.includes(a.id))}
                   getOptionLabel={(a) => `${a.firstName} ${a.lastName}`}
                   isOptionEqualToValue={(a, b) => a.id === b.id}
-                  onChange={(_, value) => setMealForm((current) => ({ ...current, guestIds: value.map((a) => a.id) }))}
+                  renderOption={(optionProps, option, { selected }) => {
+                    const { key, ...rest } = optionProps as typeof optionProps & { key: string }
+                    const isAll = option.id === SELECT_ALL_OPTION
+                    const allSelected = mealForm.guestIds.length === selectedProject.attendees.length
+                    return (
+                      <li key={key} {...rest} style={isAll ? { fontWeight: 600, color: '#1a56c4' } : undefined}>
+                        <Checkbox
+                          size="small"
+                          sx={{ p: 0.5, mr: 1 }}
+                          checked={isAll ? allSelected : selected}
+                          indeterminate={isAll && !allSelected && mealForm.guestIds.length > 0}
+                        />
+                        {option.firstName} {option.lastName}
+                      </li>
+                    )
+                  }}
+                  onChange={(_, value) =>
+                    setMealForm((current) => {
+                      const allIds = selectedProject.attendees.map((a) => a.id)
+                      if (value.some((a) => a.id === SELECT_ALL_OPTION)) {
+                        return { ...current, guestIds: current.guestIds.length === allIds.length ? [] : allIds }
+                      }
+                      return { ...current, guestIds: value.map((a) => a.id) }
+                    })
+                  }
                   noOptionsText="No event guests yet"
-                  sx={{ flex: '3 1 300px' }}
+                  className="create-event-wide"
+                  slotProps={{ popper: { sx: { width: '280px !important' }, placement: 'bottom-start' } }}
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      variant="standard"
                       required={mealForm.guestIds.length === 0}
                       label="Attending guests"
+                      size="small"
                       placeholder={mealForm.guestIds.length ? '' : 'Select guests'}
                       helperText={
                         selectedProject.attendees.length === 0
@@ -882,23 +1034,28 @@ function App() {
                     />
                   )}
                 />
-                <Button
-                  type="button"
-                  disabled={selectedProject.attendees.length === 0}
-                  onClick={() =>
-                    setMealForm((current) => ({ ...current, guestIds: selectedProject.attendees.map((a) => a.id) }))
-                  }
-                >
-                  Select all guests
-                </Button>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  disabled={!mealForm.title.trim() || !mealForm.date || mealForm.guestIds.length === 0}
-                >
-                  Save meal
-                </Button>
-              </Box>
+                </div>
+
+                <div className="create-event-actions">
+                  <Button type="button" onClick={() => setShowMealForm(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    className="primary-button"
+                    disabled={
+                      !mealForm.title.trim() ||
+                      !mealForm.date ||
+                      !mealForm.startTime ||
+                      !mealForm.category ||
+                      mealForm.guestIds.length === 0
+                    }
+                  >
+                    Save meal
+                  </Button>
+                </div>
+              </form>
             )}
           </Paper>
 
@@ -912,7 +1069,7 @@ function App() {
                 onClick={() => setShowAttendees((current) => !current)}
                 sx={{ minWidth: 0, px: 0.5, py: 0.25, fontWeight: 700, color: 'text.primary' }}
               >
-                {showAttendees ? 'Hide attendees' : 'Manage attendees'}
+                {showAttendees ? 'Hide guests' : 'Manage guests'}
               </Button>
             </div>
 
@@ -981,13 +1138,12 @@ function App() {
                           </TextField>
                         </TableCell>
                         <TableCell>
-                          <TextField
+                          <DietaryField
                             {...inlineFieldProps}
                             required
-                            value={draftAttendee.dietaryText}
-                            placeholder="e.g. vegan, nut-free (or none)"
-                            onChange={(event) =>
-                              setDraftAttendee((current) => current && { ...current, dietaryText: event.target.value })
+                            value={parseDietary(draftAttendee.dietaryText)}
+                            onChange={(next) =>
+                              setDraftAttendee((current) => current && { ...current, dietaryText: next.join(', ') })
                             }
                           />
                         </TableCell>
@@ -995,13 +1151,13 @@ function App() {
                           <IconButton
                             size="small"
                             color="primary"
-                            aria-label="Save attendee"
+                            aria-label="Save guest"
                             disabled={!isDraftComplete(draftAttendee)}
                             onClick={saveDraftAttendee}
                           >
                             <CheckIcon fontSize="small" />
                           </IconButton>
-                          <IconButton size="small" aria-label="Cancel new attendee" onClick={cancelDraftAttendee}>
+                          <IconButton size="small" aria-label="Cancel new guest" onClick={cancelDraftAttendee}>
                             <CloseIcon fontSize="small" />
                           </IconButton>
                         </TableCell>
@@ -1010,7 +1166,7 @@ function App() {
                       <TableRow hover data-tour="event-new-attendee" onClick={startDraftAttendee} sx={{ cursor: 'pointer' }}>
                         <TableCell colSpan={5} sx={{ color: 'primary.main', fontWeight: 600 }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <AddIcon fontSize="small" /> New attendee
+                            <AddIcon fontSize="small" /> New guest
                           </Box>
                         </TableCell>
                       </TableRow>
@@ -1063,7 +1219,6 @@ function App() {
                               required
                               error={attendee.dietaryRestrictions.length === 0}
                               value={attendee.dietaryRestrictions}
-                              placeholder="e.g. vegan, nut-free (or none)"
                               onChange={(dietaryRestrictions) => updateAttendee(attendee.id, { dietaryRestrictions })}
                               slotProps={{ ...inlineFieldProps.slotProps, htmlInput: { 'aria-label': `Dietary requests for ${fullName}` } }}
                             />
@@ -1082,28 +1237,68 @@ function App() {
             )}
           </Paper>
 
-          <Paper className="panel compact-section" elevation={0} sx={{ p: 2, borderRadius: 3 }}>
-            <div className="section-header compact-header">
-              <div />
-            </div>
-
-            {selectedProject.meals.filter((meal) => isPastMeal(meal)).length === 0 && (
-              <span className="muted">No past meals yet.</span>
-            )}
-
-            {selectedProject.meals
+          {(() => {
+            const pastMealList = selectedProject.meals
               .filter((meal) => isPastMeal(meal))
-              .map((meal) => (
-                <ButtonBase
-                  key={meal.id}
-                  className="past-meal-row"
-                  onClick={() => openMeal(selectedProject.id, meal.id)}
-                >
-                  <span className="past-meal-title">{meal.title}</span>
-                  <span className="past-meal-meta">{meal.date} • {meal.category}</span>
-                </ButtonBase>
-              ))}
-          </Paper>
+              .sort((x, y) => `${y.date} ${y.startTime}`.localeCompare(`${x.date} ${x.startTime}`))
+            return (
+              <Paper className="panel compact-section" elevation={0} sx={{ p: 2, borderRadius: 3 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
+                  Past meals ({pastMealList.length})
+                </Typography>
+                {pastMealList.length === 0 ? (
+                  <Typography variant="body2" className="muted" sx={{ py: 1 }}>
+                    No past meals yet. Meals move here automatically once their date and time have passed.
+                  </Typography>
+                ) : (
+                  <TableContainer>
+                    <Table size="small" className="items-table past-meals-table">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Meal</TableCell>
+                          <TableCell sx={{ width: 190 }}>When</TableCell>
+                          <TableCell sx={{ width: 100 }}>Guests</TableCell>
+                          <TableCell sx={{ width: 100 }}>Items</TableCell>
+                          <TableCell sx={{ width: 40 }} />
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {pastMealList.map((meal) => (
+                          <TableRow
+                            key={meal.id}
+                            hover
+                            tabIndex={0}
+                            className="past-meal-table-row"
+                            onClick={() => openMeal(selectedProject.id, meal.id)}
+                            onKeyDown={(event) => event.key === 'Enter' && openMeal(selectedProject.id, meal.id)}
+                          >
+                            <TableCell>
+                              <span className="past-meal-title">{meal.title}</span>
+                              <Chip size="small" label={meal.category} className="past-meal-chip" />
+                            </TableCell>
+                            <TableCell>
+                              {new Date(`${meal.date}T00:00`).toLocaleDateString(undefined, {
+                                weekday: 'short',
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                              })}
+                              {meal.startTime ? ` · ${meal.startTime}` : ''}
+                            </TableCell>
+                            <TableCell>{meal.assignedAttendeeIds.length}</TableCell>
+                            <TableCell>{meal.items.length}</TableCell>
+                            <TableCell align="right">
+                              <ChevronRightIcon fontSize="small" className="past-meal-chevron" />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                )}
+              </Paper>
+            )
+          })()}
         </main>
       )}
 
@@ -1146,7 +1341,7 @@ function App() {
                   <TableRow>
                     <TableCell sx={{ width: '22%' }}>Item</TableCell>
                     <TableCell sx={{ width: 130 }}>Category</TableCell>
-                    <TableCell>Description</TableCell>
+                    <TableCell>Item Description</TableCell>
                     <TableCell sx={{ width: '18%' }}>Responsible</TableCell>
                     <TableCell sx={{ width: 88 }} />
                   </TableRow>
@@ -1176,11 +1371,16 @@ function App() {
                         <TextField
                           {...inlineFieldProps}
                           select
+                          required
                           value={mealItemForm.category}
                           onChange={(event) =>
                             setMealItemForm((current) => ({ ...current, category: event.target.value as FoodCategory }))
                           }
+                          slotProps={{ ...inlineFieldProps.slotProps, select: { displayEmpty: true } }}
                         >
+                          <MenuItem value="" disabled>
+                            Select category…
+                          </MenuItem>
                           {foodCategoryOptions.map((option) => (
                             <MenuItem key={option} value={option}>
                               {option}
@@ -1192,7 +1392,7 @@ function App() {
                         <TextField
                           {...inlineFieldProps}
                           value={mealItemForm.description}
-                          placeholder="Description"
+                          placeholder="Item description (optional)"
                           onChange={(event) =>
                             setMealItemForm((current) => ({ ...current, description: event.target.value }))
                           }
@@ -1202,16 +1402,18 @@ function App() {
                         <TextField
                           {...inlineFieldProps}
                           select
+                          required
                           value={mealItemForm.personResponsible}
                           onChange={(event) => setMealItemForm((current) => ({ ...current, personResponsible: event.target.value }))}
                           slotProps={{ ...inlineFieldProps.slotProps, select: { displayEmpty: true } }}
                         >
-                          <MenuItem value="">
-                            <em>Unassigned</em>
+                          <MenuItem value="" disabled>
+                            Select guest…
                           </MenuItem>
-                          {mealAttendees.map((attendee) => (
+                          {selectedProject.attendees.map((attendee) => (
                             <MenuItem key={attendee.id} value={attendee.id}>
                               {attendee.firstName} {attendee.lastName}
+                              {selectedMeal.assignedAttendeeIds.includes(attendee.id) ? '' : ' (add to meal)'}
                             </MenuItem>
                           ))}
                         </TextField>
@@ -1221,7 +1423,7 @@ function App() {
                           size="small"
                           color="primary"
                           aria-label="Save item"
-                          disabled={!mealItemForm.name.trim()}
+                          disabled={!mealItemForm.name.trim() || !mealItemForm.category || !mealItemForm.personResponsible}
                           onClick={() => addMealItem(selectedMeal.id)}
                         >
                           <CheckIcon fontSize="small" />
@@ -1279,7 +1481,7 @@ function App() {
                         <TextField
                           {...inlineFieldProps}
                           value={item.description}
-                          placeholder="Description"
+                          placeholder="Item description (optional)"
                           onChange={(event) =>
                             updateMealItem(selectedMeal.id, item.id, { description: event.target.value })
                           }
@@ -1296,9 +1498,10 @@ function App() {
                           <MenuItem value="">
                             <em>Unassigned</em>
                           </MenuItem>
-                          {mealAttendees.map((attendee) => (
+                          {selectedProject.attendees.map((attendee) => (
                             <MenuItem key={attendee.id} value={attendee.id}>
                               {attendee.firstName} {attendee.lastName}
+                              {selectedMeal.assignedAttendeeIds.includes(attendee.id) ? '' : ' (add to meal)'}
                             </MenuItem>
                           ))}
                         </TextField>
@@ -1324,7 +1527,7 @@ function App() {
 
           <Paper className="panel" elevation={0} sx={{ p: 2, borderRadius: 3 }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
-              Attending guests ({mealAttendees.length} of {selectedProject.attendees.length})
+              Attending guests ({mealAttendees.length} of {selectedProject.attendees.length} Event Guests)
             </Typography>
             <TableContainer data-tour="meal-attending-table">
               <Table size="small" className="items-table">
@@ -1337,65 +1540,172 @@ function App() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {addingGuest && availableGuests.length > 0 ? (
-                    <TableRow onKeyDown={(event) => event.key === 'Escape' && setAddingGuest(false)}>
+                  {mealGuestDraft ? (
+                    <TableRow
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault()
+                          saveMealGuestDraft()
+                        } else if (event.key === 'Escape') {
+                          setMealGuestDraft(null)
+                        }
+                      }}
+                    >
+                      <TableCell>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <TextField
+                            {...inlineFieldProps}
+                            autoFocus
+                            required
+                            value={mealGuestDraft.firstName}
+                            placeholder="First name"
+                            onChange={(event) => setMealGuestDraft((c) => c && { ...c, firstName: event.target.value })}
+                          />
+                          <TextField
+                            {...inlineFieldProps}
+                            required
+                            value={mealGuestDraft.lastName}
+                            placeholder="Last name"
+                            onChange={(event) => setMealGuestDraft((c) => c && { ...c, lastName: event.target.value })}
+                          />
+                        </Box>
+                      </TableCell>
                       <TableCell>
                         <TextField
                           {...inlineFieldProps}
                           select
-                          autoFocus
-                          value=""
-                          onChange={(event) => {
-                            setMealAttendees(selectedMeal.id, [...selectedMeal.assignedAttendeeIds, event.target.value])
-                            setAddingGuest(false)
-                          }}
-                          slotProps={{
-                            ...inlineFieldProps.slotProps,
-                            select: { displayEmpty: true, defaultOpen: true },
-                            htmlInput: { 'aria-label': 'Select guest to add' },
-                          }}
+                          required
+                          value={mealGuestDraft.ageGroup}
+                          onChange={(event) =>
+                            setMealGuestDraft((c) => c && { ...c, ageGroup: event.target.value as AgeGroup })
+                          }
+                          slotProps={{ ...inlineFieldProps.slotProps, select: { displayEmpty: true } }}
                         >
                           <MenuItem value="" disabled>
-                            Select a guest…
+                            Select…
                           </MenuItem>
-                          {availableGuests.map((option) => (
-                            <MenuItem key={option.id} value={option.id}>
-                              {option.firstName} {option.lastName}
+                          {ageGroupOptions.map((option) => (
+                            <MenuItem key={option} value={option}>
+                              {option}
                             </MenuItem>
                           ))}
                         </TextField>
                       </TableCell>
-                      <TableCell colSpan={2} />
-                      <TableCell align="right">
-                        <IconButton size="small" aria-label="Cancel adding guest" onClick={() => setAddingGuest(false)}>
+                      <TableCell>
+                        <DietaryField
+                          {...inlineFieldProps}
+                          required
+                          value={parseDietary(mealGuestDraft.dietaryText)}
+                          onChange={(next) => setMealGuestDraft((c) => c && { ...c, dietaryText: next.join(', ') })}
+                        />
+                      </TableCell>
+                      <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          aria-label="Save new guest"
+                          disabled={!isDraftComplete(mealGuestDraft)}
+                          onClick={saveMealGuestDraft}
+                        >
+                          <CheckIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton size="small" aria-label="Cancel new guest" onClick={() => setMealGuestDraft(null)}>
                           <CloseIcon fontSize="small" />
                         </IconButton>
                       </TableCell>
                     </TableRow>
-                  ) : availableGuests.length > 0 ? (
-                    <TableRow data-tour="meal-add-guest">
-                      <TableCell colSpan={4}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                          <Button size="small" startIcon={<AddIcon />} onClick={() => setAddingGuest(true)}>
-                            Add guest
-                          </Button>
-                          <Button
-                            size="small"
-                            onClick={() =>
-                              setMealAttendees(selectedMeal.id, selectedProject.attendees.map((a) => a.id))
-                            }
-                          >
-                            Add all event guests
-                          </Button>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
                   ) : (
-                    <TableRow>
-                      <TableCell colSpan={4} sx={{ color: 'text.secondary' }}>
-                        {selectedProject.attendees.length === 0
-                          ? 'Add guests on the event page first.'
-                          : 'All event guests are attending this meal.'}
+                    <TableRow
+                      className="guest-picker-row"
+                      data-tour="meal-add-guest"
+                      onKeyDown={(event) => event.key === 'Escape' && closeGuestPicker()}
+                    >
+                      <TableCell>
+                        <TextField
+                          {...inlineFieldProps}
+                          select
+                          value={pendingGuestIds}
+                          onChange={(event) => {
+                            const value = event.target.value as unknown as string[]
+                            if (value.includes(NEW_GUEST_OPTION)) {
+                              setMealGuestDraft({ firstName: '', lastName: '', ageGroup: '', dietaryText: '' })
+                              closeGuestPicker()
+                            } else if (value.includes(DONE_OPTION)) {
+                              if (pendingGuestIds.length > 0) {
+                                setMealAttendees(selectedMeal.id, [...selectedMeal.assignedAttendeeIds, ...pendingGuestIds])
+                              }
+                              closeGuestPicker()
+                            } else if (value.includes(SELECT_ALL_OPTION)) {
+                              const allIds = availableGuests.map((g) => g.id)
+                              setPendingGuestIds(pendingGuestIds.length === allIds.length ? [] : allIds)
+                            } else {
+                              setPendingGuestIds(value)
+                            }
+                          }}
+                          slotProps={{
+                            ...inlineFieldProps.slotProps,
+                            select: {
+                              multiple: true,
+                              open: guestPickerOpen,
+                              onOpen: () => setGuestPickerOpen(true),
+                              onClose: () => setGuestPickerOpen(false),
+                              displayEmpty: true,
+                              renderValue: (selected) =>
+                                (selected as string[]).length === 0
+                                  ? 'Select guests…'
+                                  : `${(selected as string[]).length} selected`,
+                            },
+                            htmlInput: { 'aria-label': 'Select guests to add' },
+                          }}
+                        >
+                          {availableGuests.length > 0 ? (
+                            <MenuItem value={SELECT_ALL_OPTION} sx={{ fontWeight: 600, borderBottom: '1px solid #e5e7eb' }}>
+                              <Checkbox
+                                size="small"
+                                checked={pendingGuestIds.length === availableGuests.length}
+                                indeterminate={pendingGuestIds.length > 0 && pendingGuestIds.length < availableGuests.length}
+                                sx={{ p: 0.5, mr: 1 }}
+                              />
+                              Select all guests
+                            </MenuItem>
+                          ) : null}
+                          {availableGuests.map((option) => (
+                            <MenuItem key={option.id} value={option.id}>
+                              <Checkbox size="small" checked={pendingGuestIds.includes(option.id)} sx={{ p: 0.5, mr: 1 }} />
+                              {option.firstName} {option.lastName}
+                            </MenuItem>
+                          ))}
+                          <MenuItem value={NEW_GUEST_OPTION} sx={{ color: 'primary.main', fontWeight: 600 }}>
+                            + Add new guest…
+                          </MenuItem>
+                          <MenuItem
+                            value={DONE_OPTION}
+                            disabled={pendingGuestIds.length === 0}
+                            className="guest-picker-done"
+                          >
+                            {pendingGuestIds.length === 0
+                              ? 'Select guests to add'
+                              : `Add ${pendingGuestIds.length} ${pendingGuestIds.length === 1 ? 'guest' : 'guests'} to meal`}
+                          </MenuItem>
+                        </TextField>
+                      </TableCell>
+                      <TableCell colSpan={2} />
+                      <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          aria-label="Add selected guests"
+                          disabled={pendingGuestIds.length === 0}
+                          onClick={() => {
+                            setMealAttendees(selectedMeal.id, [...selectedMeal.assignedAttendeeIds, ...pendingGuestIds])
+                            closeGuestPicker()
+                          }}
+                        >
+                          <CheckIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton size="small" aria-label="Clear guest selection" disabled={pendingGuestIds.length === 0} onClick={closeGuestPicker}>
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
                       </TableCell>
                     </TableRow>
                   )}

@@ -62,11 +62,11 @@ export const sampleProjects: Project[] = [
       { id: 'att-3', firstName: 'Casey', lastName: 'Moreno', ageGroup: 'kid', dietaryRestrictions: ['nut-free', 'dairy-free'] },
       { id: 'att-4', firstName: 'Drew', lastName: 'Patel', ageGroup: 'toddler', dietaryRestrictions: ['none'] },
       { id: 'att-8', firstName: 'Elena', lastName: 'Lindqvist', ageGroup: 'adult', dietaryRestrictions: ['none'] },
-      { id: 'att-9', firstName: 'Marcus', lastName: 'Okafor', ageGroup: 'adult', dietaryRestrictions: ['halal'] },
-      { id: 'att-10', firstName: 'Sofia', lastName: 'Moreno', ageGroup: 'adult', dietaryRestrictions: ['lactose-intolerant'] },
+      { id: 'att-9', firstName: 'Marcus', lastName: 'Okafor', ageGroup: 'adult', dietaryRestrictions: ['none'] },
+      { id: 'att-10', firstName: 'Sofia', lastName: 'Moreno', ageGroup: 'adult', dietaryRestrictions: ['dairy-free'] },
       { id: 'att-11', firstName: 'Leo', lastName: 'Moreno', ageGroup: 'kid', dietaryRestrictions: ['none'] },
       { id: 'att-12', firstName: 'Nina', lastName: 'Patel', ageGroup: 'adult', dietaryRestrictions: ['vegetarian'] },
-      { id: 'att-13', firstName: 'Omar', lastName: 'Patel', ageGroup: 'kid', dietaryRestrictions: ['peanut-free'] },
+      { id: 'att-13', firstName: 'Omar', lastName: 'Patel', ageGroup: 'kid', dietaryRestrictions: ['nut-free'] },
       { id: 'att-14', firstName: 'Ruby', lastName: 'Okafor', ageGroup: 'kid', dietaryRestrictions: ['none'] },
       { id: 'att-15', firstName: 'Theo', lastName: 'Lindqvist', ageGroup: 'toddler', dietaryRestrictions: ['dairy-free'] },
       { id: 'att-16', firstName: 'Hannah', lastName: 'Brooks', ageGroup: 'adult', dietaryRestrictions: ['gluten-free'] },
@@ -291,7 +291,7 @@ export const sampleProjects: Project[] = [
         startTime: '10:30',
         category: 'lunch',
         attendeeCount: 12,
-        dietarySummary: 'One lactose-intolerant guest.',
+        dietarySummary: 'One dairy-free guest.',
         assignedAttendeeIds: ['att-1', 'att-2', 'att-3', 'att-4', 'att-8', 'att-9', 'att-10', 'att-11', 'att-12', 'att-13', 'att-14', 'att-15'],
         items: [
           {
@@ -343,20 +343,19 @@ export const sampleProjects: Project[] = [
   {
     id: 'project-2',
     name: 'Neighborhood Potluck',
-    description: 'A shared neighborhood dinner event with password-protected planning and reusable attendee list.',
-    visibility: 'private-password',
-    password: 'potluck123',
+    description: 'A shared neighborhood dinner event with open planning and a reusable guest list.',
+    visibility: 'public',
     attendees: [
       { id: 'att-5', firstName: 'Jordan', lastName: 'Reyes', ageGroup: 'adult', dietaryRestrictions: ['vegan'] },
       { id: 'att-6', firstName: 'Morgan', lastName: 'Chen', ageGroup: 'adult', dietaryRestrictions: ['none'] },
-      { id: 'att-7', firstName: 'Pat', lastName: 'Sullivan', ageGroup: 'kid', dietaryRestrictions: ['shellfish-free'] },
+      { id: 'att-7', firstName: 'Pat', lastName: 'Sullivan', ageGroup: 'kid', dietaryRestrictions: ['none'] },
       { id: 'att-18', firstName: 'Priya', lastName: 'Nair', ageGroup: 'adult', dietaryRestrictions: ['vegetarian'] },
       { id: 'att-19', firstName: 'Tom', lastName: 'Nair', ageGroup: 'adult', dietaryRestrictions: ['none'] },
       { id: 'att-20', firstName: 'Ivy', lastName: 'Nair', ageGroup: 'kid', dietaryRestrictions: ['none'] },
       { id: 'att-21', firstName: 'Carlos', lastName: 'Mendez', ageGroup: 'adult', dietaryRestrictions: ['none'] },
       { id: 'att-22', firstName: 'Lucia', lastName: 'Mendez', ageGroup: 'adult', dietaryRestrictions: ['vegan'] },
       { id: 'att-23', firstName: 'Mateo', lastName: 'Mendez', ageGroup: 'toddler', dietaryRestrictions: ['none'] },
-      { id: 'att-24', firstName: 'Grace', lastName: 'Kim', ageGroup: 'adult', dietaryRestrictions: ['shellfish-free'] },
+      { id: 'att-24', firstName: 'Grace', lastName: 'Kim', ageGroup: 'adult', dietaryRestrictions: ['none'] },
       { id: 'att-25', firstName: 'Eli', lastName: 'Kim', ageGroup: 'kid', dietaryRestrictions: ['nut-free'] },
     ],
     meals: [
@@ -367,7 +366,7 @@ export const sampleProjects: Project[] = [
         startTime: '19:00',
         category: 'dinner',
         attendeeCount: 9,
-        dietarySummary: 'Two vegetarian guests and one shellfish-free guest.',
+        dietarySummary: 'Two vegetarian guests.',
         assignedAttendeeIds: ['att-5', 'att-6', 'att-7', 'att-18', 'att-19', 'att-20', 'att-21', 'att-22', 'att-23'],
         items: [
           {
