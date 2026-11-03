@@ -193,9 +193,12 @@ function App() {
   const [pendingGuestIds, setPendingGuestIds] = useState<string[]>([])
   const [mealGuestDraft, setMealGuestDraft] = useState<AttendeeDraft | null>(null)
 
+  const [hydrated, setHydrated] = useState(false)
+
+  // wait for the initial load so sample data never overwrites saved data
   useEffect(() => {
-    void persistProjects(projects)
-  }, [projects])
+    if (hydrated) void persistProjects(projects)
+  }, [projects, hydrated])
 
   useEffect(() => {
     setShowCreateEventForm(false)
@@ -211,6 +214,7 @@ function App() {
       const savedProjects = await loadProjects()
       if (!mounted) return
       setProjects(savedProjects)
+      setHydrated(true)
       if (savedProjects[0]) {
         setSelectedProjectId(savedProjects[0].id)
       }
@@ -302,14 +306,14 @@ function App() {
     const sourceProject = projects.find((project) => project.id === projectForm.cloneFromId)
 
     const newProject: Project = {
-      id: `project-${Date.now()}`,
+      id: crypto.randomUUID(),
       name: projectForm.name.trim(),
       description: projectForm.description.trim(),
       visibility: 'public',
       attendees: sourceProject
-        ? sourceProject.attendees.map((a, index) => ({
+        ? sourceProject.attendees.map((a) => ({
             ...a,
-            id: `att-${Date.now()}-${index}`,
+            id: crypto.randomUUID(),
             dietaryRestrictions: [...a.dietaryRestrictions],
           }))
         : [],
@@ -332,7 +336,7 @@ function App() {
     if (!selectedProject || !draftAttendee || !isDraftComplete(draftAttendee)) return
 
     const nextAttendee: Attendee = {
-      id: `att-${Date.now()}`,
+      id: crypto.randomUUID(),
       firstName: draftAttendee.firstName.trim(),
       lastName: draftAttendee.lastName.trim(),
       ageGroup: draftAttendee.ageGroup as AgeGroup,
@@ -354,7 +358,7 @@ function App() {
     if (!selectedProject || !selectedMeal || !mealGuestDraft || !isDraftComplete(mealGuestDraft)) return
 
     const nextAttendee: Attendee = {
-      id: `att-${Date.now()}`,
+      id: crypto.randomUUID(),
       firstName: mealGuestDraft.firstName.trim(),
       lastName: mealGuestDraft.lastName.trim(),
       ageGroup: mealGuestDraft.ageGroup as AgeGroup,
@@ -480,7 +484,7 @@ function App() {
       return
 
     const newMeal: Meal = {
-      id: `meal-${Date.now()}`,
+      id: crypto.randomUUID(),
       title: mealForm.title.trim(),
       date: mealForm.date,
       startTime: mealForm.startTime,
@@ -505,7 +509,7 @@ function App() {
     if (!selectedProject || !mealItemForm.name.trim() || !mealItemForm.category || !mealItemForm.personResponsible) return
 
     const nextItem: MealItem = {
-      id: `item-${Date.now()}`,
+      id: crypto.randomUUID(),
       name: mealItemForm.name.trim(),
       description: mealItemForm.description.trim(),
       category: mealItemForm.category,
