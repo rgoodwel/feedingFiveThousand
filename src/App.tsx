@@ -43,7 +43,7 @@ import {
   type AgeGroup,
   type FoodCategory,
 } from './data/sampleData'
-import { loadProjects, persistProjects } from './lib/projectService'
+import { loadProjects, persistProjects, usesSupabase } from './lib/projectService'
 
 const ageGroupOptions: AgeGroup[] = ['toddler', 'kid', 'adult']
 
@@ -162,8 +162,8 @@ const defaultItemForm = {
 }
 
 function App() {
-  const [projects, setProjects] = useState<Project[]>(sampleProjects)
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(sampleProjects[0]?.id ?? null)
+  const [projects, setProjects] = useState<Project[]>(usesSupabase ? [] : sampleProjects)
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(usesSupabase ? null : (sampleProjects[0]?.id ?? null))
   const [selectedMealId, setSelectedMealId] = useState<string | null>(null)
   const [projectForm, setProjectForm] = useState(defaultProjectForm)
   const [mealForm, setMealForm] = useState(defaultMealForm)
@@ -218,7 +218,14 @@ function App() {
     let mounted = true
 
     const hydrate = async () => {
-      const savedProjects = await loadProjects()
+      let savedProjects: Project[]
+      try {
+        savedProjects = await loadProjects()
+      } catch (error) {
+        // stay un-hydrated so a failed load can never overwrite remote data
+        console.error(error)
+        return
+      }
       if (!mounted) return
       setProjects(savedProjects)
       setHydrated(true)

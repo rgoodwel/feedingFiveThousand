@@ -125,48 +125,44 @@ const normalizeProject = (project: Record<string, any>): Project => {
   };
 };
 
+export const usesSupabase = Boolean(supabase)
+
+// When Supabase is configured it is the only source of truth: no localStorage cache and no sample data.
 export async function loadProjects(): Promise<Project[]> {
   if (supabase) {
     try {
-      const { data: projectsData, error } = await supabase.from('projects').select('*');
-      if (error) {
-        console.warn('Supabase project load error:', error.message)
-      }
-
-      if (projectsData && projectsData.length > 0) {
-        const projects = await Promise.all(
-          projectsData.map(async (project) => {
-            if (!supabase) return normalizeProject(project)
-
-            const [attendeesResult, mealsResult, itemsResult] = await Promise.all([
-              supabase.from('attendees').select('*').eq('project_id', project.id),
-              supabase.from('meals').select('*').eq('project_id', project.id),
-              supabase.from('meal_items').select('*'),
-            ])
-
-            const attendees = attendeesResult.data ?? []
-            const meals = mealsResult.data ?? []
-            const items = itemsResult.data ?? []
-
-            return normalizeProject({
-              ...project,
-              attendees,
-              meals: meals.map((meal) => ({
-                ...meal,
-                items: items.filter((item) => item.meal_id === meal.id),
-              })),
-            })
-          }),
-        )
-
-        if (projects.length) {
-          syncedIds = collectIds(projects)
-          return projects
-        }
-      }
-    } catch (error) {
-      console.warn('Supabase load failed, falling back to local demo data.', error)
+      localStorage.removeItem(STORAGE_KEY)
+    } catch {
+      // no-op
     }
+
+    const { data: projectsData, error } = await supabase.from('projects').select('*')
+    if (error) throw new Error(`Supabase project load failed: ${error.message}`)
+
+    const projects = await Promise.all(
+      (projectsData ?? []).map(async (project) => {
+        const [attendeesResult, mealsResult, itemsResult] = await Promise.all([
+          supabase!.from('attendees').select('*').eq('project_id', project.id),
+          supabase!.from('meals').select('*').eq('project_id', project.id),
+          supabase!.from('meal_items').select('*'),
+        ])
+        const failed = attendeesResult.error ?? mealsResult.error ?? itemsResult.error
+        if (failed) throw new Error(`Supabase load failed: ${failed.message}`)
+
+        const items = itemsResult.data ?? []
+        return normalizeProject({
+          ...project,
+          attendees: attendeesResult.data ?? [],
+          meals: (mealsResult.data ?? []).map((meal) => ({
+            ...meal,
+            items: items.filter((item) => item.meal_id === meal.id),
+          })),
+        })
+      }),
+    )
+
+    syncedIds = collectIds(projects)
+    return projects
   }
 
   try {
@@ -203,13 +199,14 @@ export function persistProjects(projects: Project[]) {
 }
 
 async function syncProjects(projects: Project[]) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(projects))
-  } catch {
-    // no-op, browser storage may be unavailable
+  if (!supabase) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(projects))
+    } catch {
+      // no-op, browser storage may be unavailable
+    }
+    return
   }
-
-  if (!supabase) return
 
   try {
     const currentIds = collectIds(projects)
