@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useTour } from './tour/useTour'
 import type { TourView } from './tour/tours'
+import Alert from '@mui/material/Alert'
 import Autocomplete from '@mui/material/Autocomplete'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -731,6 +732,12 @@ function App() {
 
   return (
     <div className="app-shell">
+      {!usesSupabase && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          Supabase isn't configured in this build, so data is only stored in this browser (local cache) and sample data is shown.
+          Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in the host's build environment and redeploy.
+        </Alert>
+      )}
       {view === 'dashboard' && (
         <Box component="header" className="topbar" sx={{ px: 2.5, py: 1.75, mb: 2 }}>
           <Box>
