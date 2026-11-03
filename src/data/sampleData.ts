@@ -26,6 +26,7 @@ export interface Meal {
   title: string;
   date: string;
   startTime: string;
+  location: string;
   category: MealCategory;
   attendeeCount: number;
   dietarySummary: string;
@@ -78,6 +79,7 @@ export const sampleProjects: Project[] = [
         title: 'Saturday Breakfast',
         date: '2026-11-07',
         startTime: '08:00',
+        location: '',
         category: 'breakfast',
         attendeeCount: 12,
         dietarySummary: 'Vegetarian and gluten-free options required.',
@@ -153,6 +155,7 @@ export const sampleProjects: Project[] = [
         title: 'Saturday Dinner',
         date: '2026-11-07',
         startTime: '18:30',
+        location: '',
         category: 'dinner',
         attendeeCount: 14,
         dietarySummary: 'One vegan guest and one nut-free guest.',
@@ -235,6 +238,7 @@ export const sampleProjects: Project[] = [
         title: 'Friday Welcome Dinner',
         date: '2026-10-23',
         startTime: '18:00',
+        location: '',
         category: 'dinner',
         attendeeCount: 10,
         dietarySummary: 'Vegetarian and gluten-free options provided.',
@@ -289,6 +293,7 @@ export const sampleProjects: Project[] = [
         title: 'Sunday Brunch',
         date: '2026-10-25',
         startTime: '10:30',
+        location: '',
         category: 'lunch',
         attendeeCount: 12,
         dietarySummary: 'One dairy-free guest.',
@@ -364,6 +369,7 @@ export const sampleProjects: Project[] = [
         title: 'Thursday Dinner',
         date: '2026-11-12',
         startTime: '19:00',
+        location: '',
         category: 'dinner',
         attendeeCount: 9,
         dietarySummary: 'Two vegetarian guests.',
@@ -432,6 +438,7 @@ export const sampleProjects: Project[] = [
         title: 'Wednesday Soup Night',
         date: '2026-10-21',
         startTime: '18:30',
+        location: '',
         category: 'dinner',
         attendeeCount: 8,
         dietarySummary: 'One vegan guest.',

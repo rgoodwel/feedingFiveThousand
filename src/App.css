@@ -477,7 +477,7 @@ textarea {
 
 .meal-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 12px;
   margin-top: 12px;
 }
@@ -485,14 +485,40 @@ textarea {
 .meal-tile {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
   text-align: left;
+  width: 100%;
+}
+
+.meal-tile-chip {
+  text-transform: capitalize;
+  flex-shrink: 0;
+}
+
+.meal-tile-stats {
+  display: flex;
+  gap: 16px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.meal-tile-stats strong {
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.meal-tile .meal-summary {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.4;
 }
 
 .meal-tile-header {
   display: flex;
   justify-content: space-between;
-  align-items: start;
+  align-items: center;
   gap: 12px;
 }
 
@@ -1633,4 +1659,14 @@ textarea {
   .meal-items-table .MuiTableRow-root:not(.draft-row):not(.row-expanded) .MuiSelect-select {
     padding-right: 0 !important;
   }
+}
+
+.delete-meal-button {
+  white-space: nowrap;
+}
+
+.meal-location {
+  font-size: 0.85rem;
+  color: #5f6b7a;
+  margin-top: 2px;
 }

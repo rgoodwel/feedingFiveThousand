@@ -29,6 +29,7 @@ import CloseIcon from '@mui/icons-material/Close'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import HelpOutlineIcon from '@mui/icons-material/HelpOutlineOutlined'
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined'
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import './App.css'
@@ -148,6 +149,7 @@ const defaultMealForm = {
   title: '',
   date: '',
   startTime: '',
+  location: '',
   category: '' as MealCategory | '',
   guestIds: [] as string[],
 }
@@ -169,8 +171,13 @@ function App() {
   const [projectPasswordInput, setProjectPasswordInput] = useState('')
   const [projectAccess, setProjectAccess] = useState<Record<string, boolean>>({})
   const [view, setView] = useState<'dashboard' | 'project' | 'meal'>('dashboard')
+  const [editForm, setEditForm] = useState<
+    | { kind: 'event'; name: string; description: string }
+    | { kind: 'meal'; title: string; date: string; startTime: string; location: string; category: MealCategory }
+    | null
+  >(null)
   const [deleteTarget, setDeleteTarget] = useState<{
-    type: 'meal' | 'meal-item'
+    type: 'event' | 'meal' | 'meal-item'
     projectId: string
     mealId?: string
     itemId?: string
@@ -488,6 +495,7 @@ function App() {
       title: mealForm.title.trim(),
       date: mealForm.date,
       startTime: mealForm.startTime,
+      location: mealForm.location.trim(),
       category: mealForm.category,
       attendeeCount: mealForm.guestIds.length,
       dietarySummary: '',
@@ -540,6 +548,56 @@ function App() {
     setShowMealItemForm(false)
   }
 
+  const openEditEvent = () => {
+    if (!selectedProject) return
+    setEditForm({ kind: 'event', name: selectedProject.name, description: selectedProject.description })
+  }
+
+  const openEditMeal = () => {
+    if (!selectedMeal) return
+    setEditForm({
+      kind: 'meal',
+      title: selectedMeal.title,
+      date: selectedMeal.date,
+      startTime: selectedMeal.startTime,
+      location: selectedMeal.location,
+      category: selectedMeal.category,
+    })
+  }
+
+  const saveEdit = (event: React.FormEvent) => {
+    event.preventDefault()
+    if (!selectedProject || !editForm) return
+
+    if (editForm.kind === 'event') {
+      const name = editForm.name.trim()
+      if (!name) return
+      setProjects((current) =>
+        current.map((project) =>
+          project.id === selectedProject.id ? { ...project, name, description: editForm.description.trim() } : project,
+        ),
+      )
+    } else {
+      const title = editForm.title.trim()
+      if (!selectedMeal || !title || !editForm.date || !editForm.startTime) return
+      const { date, startTime, category } = editForm
+      const location = editForm.location.trim()
+      setProjects((current) =>
+        current.map((project) =>
+          project.id !== selectedProject.id
+            ? project
+            : {
+                ...project,
+                meals: project.meals.map((meal) =>
+                  meal.id === selectedMeal.id ? { ...meal, title, date, startTime, location, category } : meal,
+                ),
+              },
+        ),
+      )
+    }
+    setEditForm(null)
+  }
+
   const updateMealItem = (mealId: string, itemId: string, patch: Partial<MealItem>) => {
     if (!selectedProject) return
 
@@ -562,7 +620,15 @@ function App() {
     )
   }
 
-  const requestDelete = (type: 'meal' | 'meal-item', projectId: string, mealId?: string, itemId?: string) => {
+  const deleteMeal = deleteTarget?.type === 'meal'
+    ? projects.find((project) => project.id === deleteTarget.projectId)?.meals.find((meal) => meal.id === deleteTarget.mealId)
+    : undefined
+  const deleteMealTitle = deleteMeal?.title ?? 'this meal'
+  const deleteMealItemCount = deleteMeal?.items.length ?? 0
+
+  const deleteEvent = deleteTarget?.type === 'event' ? projects.find((project) => project.id === deleteTarget.projectId) : undefined
+
+  const requestDelete = (type: 'event' | 'meal' | 'meal-item', projectId: string, mealId?: string, itemId?: string) => {
     setDeleteTarget({ type, projectId, mealId, itemId })
     setDeleteStep(1)
   }
@@ -573,6 +639,12 @@ function App() {
     if (deleteStep === 1) {
       setDeleteStep(2)
       return
+    }
+
+    if (deleteTarget.type === 'event') {
+      setProjects((current) => current.filter((project) => project.id !== deleteTarget.projectId))
+      setSelectedMealId(null)
+      setView('dashboard')
     }
 
     if (deleteTarget.type === 'meal' && deleteTarget.projectId && deleteTarget.mealId) {
@@ -674,12 +746,22 @@ function App() {
 
       {deleteTarget && (
         <Dialog open={Boolean(deleteTarget)} onClose={cancelDelete} maxWidth="xs" fullWidth>
-          <DialogTitle>Confirm delete</DialogTitle>
+          <DialogTitle>
+            {deleteTarget.type === 'event' ? 'Delete event?' : deleteTarget.type === 'meal' ? 'Delete meal?' : 'Confirm delete'}
+          </DialogTitle>
           <DialogContent>
             <DialogContentText>
-              {deleteStep === 1
-                ? 'This action is destructive. Please confirm to continue.'
-                : 'This is the final confirmation. Delete this item permanently?'}
+              {deleteTarget.type === 'event'
+                ? deleteStep === 1
+                  ? `Delete "${deleteEvent?.name ?? 'this event'}" with its ${deleteEvent?.meals.length ?? 0} meals, their items and ${deleteEvent?.attendees.length ?? 0} guests? This can't be undone.`
+                  : 'This is the final confirmation. Delete this event and everything in it permanently?'
+                : deleteTarget.type === 'meal'
+                ? deleteStep === 1
+                  ? `Delete "${deleteMealTitle}" and all ${deleteMealItemCount} of its meal items? This can't be undone.`
+                  : 'This is the final confirmation. Delete this meal and its items permanently?'
+                : deleteStep === 1
+                  ? 'This action is destructive. Please confirm to continue.'
+                  : 'This is the final confirmation. Delete this item permanently?'}
             </DialogContentText>
           </DialogContent>
           <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
@@ -690,6 +772,127 @@ function App() {
               {deleteStep === 1 ? 'Confirm delete' : 'Delete now'}
             </Button>
           </DialogActions>
+        </Dialog>
+      )}
+
+      {editForm && selectedProject && (
+        <Dialog open onClose={() => setEditForm(null)} maxWidth="xs" fullWidth>
+          <form onSubmit={saveEdit}>
+            <DialogTitle>{editForm.kind === 'event' ? 'Edit event' : 'Edit meal'}</DialogTitle>
+            <DialogContent sx={{ display: 'grid', gap: 2, pt: '8px !important' }}>
+              {editForm.kind === 'event' ? (
+                <>
+                  <TextField
+                    size="small"
+                    required
+                    autoFocus
+                    label="Event name"
+                    value={editForm.name}
+                    onChange={(event) => setEditForm({ ...editForm, name: event.target.value })}
+                    slotProps={{ htmlInput: { maxLength: 80 } }}
+                  />
+                  <TextField
+                    size="small"
+                    multiline
+                    minRows={2}
+                    label="Description"
+                    value={editForm.description}
+                    onChange={(event) => setEditForm({ ...editForm, description: event.target.value })}
+                  />
+                </>
+              ) : (
+                <>
+                  <TextField
+                    size="small"
+                    required
+                    autoFocus
+                    label="Meal name"
+                    value={editForm.title}
+                    onChange={(event) => setEditForm({ ...editForm, title: event.target.value })}
+                    slotProps={{ htmlInput: { maxLength: 60 } }}
+                  />
+                  <TextField
+                    size="small"
+                    required
+                    type="date"
+                    label="Date"
+                    value={editForm.date}
+                    onChange={(event) => setEditForm({ ...editForm, date: event.target.value })}
+                    slotProps={{ inputLabel: { shrink: true } }}
+                  />
+                  <TextField
+                    size="small"
+                    required
+                    type="time"
+                    label="Start time"
+                    value={editForm.startTime}
+                    onChange={(event) => setEditForm({ ...editForm, startTime: event.target.value })}
+                    slotProps={{ inputLabel: { shrink: true } }}
+                  />
+                  <TextField
+                    size="small"
+                    label="Location"
+                    placeholder="Main lodge"
+                    value={editForm.location}
+                    onChange={(event) => setEditForm({ ...editForm, location: event.target.value })}
+                    slotProps={{ htmlInput: { maxLength: 100 } }}
+                  />
+                  <TextField
+                    size="small"
+                    select
+                    required
+                    label="Type"
+                    value={editForm.category}
+                    onChange={(event) => setEditForm({ ...editForm, category: event.target.value as MealCategory })}
+                  >
+                    {mealCategoryOptions.map((option) => (
+                      <MenuItem key={option} value={option} sx={{ textTransform: 'capitalize' }}>
+                        {option}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </>
+              )}
+            </DialogContent>
+            <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
+              {editForm.kind === 'event' && (
+                <Button
+                  type="button"
+                  color="error"
+                  className="delete-meal-button"
+                  startIcon={<DeleteOutlinedIcon fontSize="small" />}
+                  sx={{ mr: 'auto' }}
+                  onClick={() => {
+                    setEditForm(null)
+                    requestDelete('event', selectedProject.id)
+                  }}
+                >
+                  Delete event
+                </Button>
+              )}
+              {editForm.kind === 'meal' && selectedMeal && (
+                <Button
+                  type="button"
+                  color="error"
+                  className="delete-meal-button"
+                  startIcon={<DeleteOutlinedIcon fontSize="small" />}
+                  sx={{ mr: 'auto' }}
+                  onClick={() => {
+                    setEditForm(null)
+                    requestDelete('meal', selectedProject.id, selectedMeal.id)
+                  }}
+                >
+                  Delete meal
+                </Button>
+              )}
+              <Button type="button" variant="outlined" onClick={() => setEditForm(null)}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="contained">
+                Save
+              </Button>
+            </DialogActions>
+          </form>
         </Dialog>
       )}
 
@@ -894,6 +1097,16 @@ function App() {
               </div>
               <div className="project-actions">
                 {tourButton}
+                <Button
+                  type="button"
+                  variant="outlined"
+                  color="primary"
+                  className="secondary-button"
+                  startIcon={<EditOutlinedIcon fontSize="small" />}
+                  onClick={openEditEvent}
+                >
+                  Edit event
+                </Button>
                 <Button type="button" variant="outlined" color="primary" className="secondary-button" data-tour="nav-back" onClick={() => setView('dashboard')}>
                   ← Dashboard
                 </Button>
@@ -920,32 +1133,24 @@ function App() {
                 .filter((meal) => !isPastMeal(meal))
                 .map((meal) => (
                   <Card key={meal.id} className="project-card" data-tour="event-meal-tile" sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-                    <CardActionArea onClick={() => openMeal(selectedProject.id, meal.id)} sx={{ p: 1.5, height: '100%' }}>
+                    <CardActionArea onClick={() => openMeal(selectedProject.id, meal.id)} sx={{ p: 0, height: '100%', alignItems: 'stretch' }}>
                     <div className="meal-tile">
                     <div className="meal-tile-header">
-                      <div>
-                        <h4>{meal.title}</h4>
-                        <div className="meal-date">
-                          {meal.date} • {meal.startTime}
-                        </div>
-                      </div>
+                      <h4>{meal.title}</h4>
+                      <Chip size="small" label={meal.category} className="meal-tile-chip" />
                     </div>
-
-                    <div className="meal-metrics">
-                      <div className="meal-metric">
-                        <strong>{meal.category}</strong>
-                        <span>Type</span>
-                      </div>
-                      <div className="meal-metric">
-                        <strong>{meal.attendeeCount || meal.assignedAttendeeIds.length}</strong>
-                        <span>Guests</span>
-                      </div>
-                      <div className="meal-metric">
-                        <strong>{meal.items.length}</strong>
-                        <span>Items</span>
-                      </div>
+                    <div className="meal-date">
+                      {formatDate(meal.date)} • {formatTime(meal.startTime)}
+                      {meal.location && <span className="meal-location"> • 📍 {meal.location}</span>}
                     </div>
-
+                    <div className="meal-tile-stats">
+                      <span>
+                        <strong>{meal.attendeeCount || meal.assignedAttendeeIds.length}</strong> guests
+                      </span>
+                      <span>
+                        <strong>{meal.items.length}</strong> items
+                      </span>
+                    </div>
                     <p className="meal-summary">{meal.dietarySummary || 'No dietary guidance recorded yet.'}</p>
                     </div>
                     </CardActionArea>
@@ -1012,6 +1217,14 @@ function App() {
                     value={mealForm.startTime}
                     onChange={(event) => setMealForm((current) => ({ ...current, startTime: event.target.value }))}
                     slotProps={{ inputLabel: { shrink: true } }}
+                  />
+                  <TextField
+                    size="small"
+                    label="Location"
+                    placeholder="Main lodge"
+                    value={mealForm.location}
+                    onChange={(event) => setMealForm((current) => ({ ...current, location: event.target.value }))}
+                    slotProps={{ htmlInput: { maxLength: 100 } }}
                   />
                   <TextField
                     size="small"
@@ -1341,15 +1554,11 @@ function App() {
                             <TableCell data-label="Meal">
                               <span className="past-meal-title">{meal.title}</span>
                               <Chip size="small" label={meal.category} className="past-meal-chip" />
+                              {meal.location && <div className="meal-location">📍 {meal.location}</div>}
                             </TableCell>
                             <TableCell data-label="When">
-                              {new Date(`${meal.date}T00:00`).toLocaleDateString(undefined, {
-                                weekday: 'short',
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric',
-                              })}
-                              {meal.startTime ? ` · ${meal.startTime}` : ''}
+                              {formatDate(meal.date)}
+                              {meal.startTime ? ` · ${formatTime(meal.startTime)}` : ''}
                             </TableCell>
                             <TableCell data-label="Guests">{meal.assignedAttendeeIds.length}</TableCell>
                             <TableCell data-label="Items">{meal.items.length}</TableCell>
@@ -1377,8 +1586,9 @@ function App() {
                   <h2>{selectedMeal.title}</h2>
                 </div>
                 <div className="meal-header-metadata">
-                  <span>{selectedMeal.date || 'No date'}</span>
-                  <span>{selectedMeal.startTime || 'No time'}</span>
+                  <span>{formatDate(selectedMeal.date) || 'No date'}</span>
+                  <span>{formatTime(selectedMeal.startTime) || 'No time'}</span>
+                  {selectedMeal.location && <span>📍 {selectedMeal.location}</span>}
                   <span>{selectedMeal.category}</span>
                   <span>
                     {mealAttendees.length} {mealAttendees.length === 1 ? 'guest' : 'guests'} ({ageGroupCounts.adult} adults,{' '}
@@ -1389,6 +1599,16 @@ function App() {
               </div>
               <div className="project-actions meal-header-actions">
                 {tourButton}
+                <Button
+                  type="button"
+                  variant="outlined"
+                  color="primary"
+                  className="secondary-button"
+                  startIcon={<EditOutlinedIcon fontSize="small" />}
+                  onClick={openEditMeal}
+                >
+                  Edit meal
+                </Button>
                 <Button type="button" variant="outlined" color="primary" className="secondary-button" data-tour="nav-back" onClick={() => setView('project')}>
                   ← Event
                 </Button>
@@ -1850,6 +2070,18 @@ function App() {
 
     </div>
   )
+}
+
+function formatDate(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value)
+  return match ? `${match[2]}/${match[3]}/${match[1].slice(2)}` : value
+}
+
+function formatTime(value: string) {
+  const match = /^(\d{1,2}):(\d{2})/.exec(value)
+  if (!match) return value
+  const hours = Number(match[1])
+  return `${hours % 12 || 12}:${match[2]} ${hours < 12 ? 'AM' : 'PM'}`
 }
 
 function isPastMeal(meal: Meal) {

@@ -86,6 +86,7 @@ const normalizeProjectBase = (project: Record<string, any>): Project => ({
           title: String(meal.title ?? 'Meal'),
           date: String(meal.date ?? new Date().toISOString().slice(0, 10)),
           startTime: String(meal.startTime ?? meal.start_time ?? '12:00').slice(0, 5),
+          location: String(meal.location ?? ''),
           category: (meal.category as Project['meals'][number]['category']) ?? 'lunch',
           attendeeCount: Number(meal.attendeeCount ?? meal.attendee_count ?? 0),
           dietarySummary: String(meal.dietarySummary ?? meal.dietary_summary ?? ''),
@@ -252,7 +253,7 @@ async function syncProjects(projects: Project[]) {
       report('attendees', await supabase.from('attendees').upsert(attendeeRows))
 
       for (const meal of project.meals) {
-        report('meals', await supabase.from('meals').upsert({
+        const mealRow = {
           id: meal.id,
           project_id: project.id,
           title: meal.title,
@@ -262,7 +263,13 @@ async function syncProjects(projects: Project[]) {
           attendee_count: meal.attendeeCount,
           dietary_summary: meal.dietarySummary,
           assigned_attendee_ids: meal.assignedAttendeeIds,
-        }))
+        }
+        let mealResult = await supabase.from('meals').upsert({ ...mealRow, location: meal.location })
+        if (mealResult.error && /location/i.test(mealResult.error.message)) {
+          // The location column hasn't been added to the remote table yet.
+          mealResult = await supabase.from('meals').upsert(mealRow)
+        }
+        report('meals', mealResult)
 
         for (const item of meal.items) {
           report('meal_items', await supabase.from('meal_items').upsert({

@@ -33,6 +33,7 @@ create table if not exists meals (
   title text not null,
   date date not null,
   start_time time not null,
+  location text not null default '',
   category text not null check (category in ('breakfast', 'lunch', 'dinner')),
   attendee_count integer not null default 0,
   dietary_summary text not null default '',
@@ -41,6 +42,8 @@ create table if not exists meals (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table meals add column if not exists location text not null default '';
 
 create table if not exists meal_items (
   id uuid primary key default gen_random_uuid(),
