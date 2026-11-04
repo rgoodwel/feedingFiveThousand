@@ -1790,3 +1790,73 @@ textarea {
   .meal-items-table .MuiTableBody-root .MuiTableRow-root.row-expanded:not(.draft-row) > .MuiTableCell-root[data-label='Responsible'] { grid-column: 2 / 4; grid-row: 2; }
   .meal-items-table .MuiTableBody-root .MuiTableRow-root.row-expanded:not(.draft-row) > .MuiTableCell-root[data-label='Item Description'] { grid-column: 1 / -1; grid-row: 3; }
 }
+
+@media (max-width: 700px) {
+  .project-actions {
+    justify-content: flex-start;
+    gap: 6px;
+  }
+
+  .project-actions .icon-on-phone {
+    min-width: 40px;
+    width: 40px;
+    padding: 0;
+    margin-left: 0;
+  }
+
+  .project-actions .icon-on-phone .MuiButton-startIcon {
+    margin: 0;
+  }
+
+  .project-actions .icon-on-phone .btn-label {
+    display: none;
+  }
+
+  .project-actions .secondary-button:not(.icon-on-phone) {
+    margin-left: auto;
+  }
+}
+
+.event-actions-bar {
+  width: 100%;
+  margin-left: 0;
+  justify-content: flex-start;
+  padding-top: 12px;
+}
+
+.event-actions-bar > button:last-child {
+  margin-left: auto;
+}
+
+@media (max-width: 700px) {
+  .event-actions-bar .secondary-button:not(.icon-on-phone) {
+    margin-left: auto;
+  }
+}
+
+/* desktop: info on the left, action buttons grouped in the top-right corner */
+@media (min-width: 701px) {
+  .panel:has(> .event-actions-bar) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 16px;
+    align-items: start;
+  }
+
+  .panel:has(> .event-actions-bar) > * {
+    grid-column: 1;
+  }
+
+  .panel:has(> .event-actions-bar) > .event-actions-bar {
+    grid-column: 2;
+    grid-row: 1;
+    width: auto;
+    padding-top: 0;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+  }
+
+  .event-actions-bar > button:last-child {
+    margin-left: 0;
+  }
+}

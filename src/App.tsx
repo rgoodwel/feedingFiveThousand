@@ -15,7 +15,9 @@ import DialogContent from '@mui/material/DialogContent'
 import DialogContentText from '@mui/material/DialogContentText'
 import DialogTitle from '@mui/material/DialogTitle'
 import IconButton from '@mui/material/IconButton'
+import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
+import Snackbar from '@mui/material/Snackbar'
 import Paper from '@mui/material/Paper'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
@@ -33,6 +35,10 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import HelpOutlineIcon from '@mui/icons-material/HelpOutlineOutlined'
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
+import ShareOutlinedIcon from '@mui/icons-material/ShareOutlined'
+import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined'
+import SmsOutlinedIcon from '@mui/icons-material/SmsOutlined'
+import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import './App.css'
@@ -337,7 +343,14 @@ function App() {
       if (!mounted) return
       setProjects(savedProjects)
       setHydrated(true)
-      if (savedProjects[0]) {
+      const params = new URLSearchParams(window.location.search)
+      const linkedProject = savedProjects.find((project) => project.id === params.get('event'))
+      const linkedMeal = linkedProject?.meals.find((meal) => meal.id === params.get('meal'))
+      if (linkedProject) {
+        setSelectedProjectId(linkedProject.id)
+        setSelectedMealId(linkedMeal?.id ?? null)
+        setView(linkedMeal ? 'meal' : 'project')
+      } else if (savedProjects[0]) {
         setSelectedProjectId(savedProjects[0].id)
       }
     }
@@ -404,8 +417,8 @@ function App() {
       (view === 'meal' && Boolean(selectedMeal)))
   const { startTour } = useTour(tourView, tourReady)
   const tourButton = (
-    <Button type="button" size="small" variant="text" startIcon={<HelpOutlineIcon />} onClick={startTour}>
-      Take the tour
+    <Button type="button" size="small" variant="text" className="icon-on-phone" aria-label="Take the tour" startIcon={<HelpOutlineIcon />} onClick={startTour}>
+      <span className="btn-label">Take the tour</span>
     </Button>
   )
 
@@ -663,6 +676,42 @@ function App() {
     setShowMealItemForm(false)
   }
 
+  const [shareAnchor, setShareAnchor] = useState<{ el: HTMLElement; kind: 'event' | 'meal' } | null>(null)
+  const [shareCopied, setShareCopied] = useState(false)
+
+  const shareLink = (kind: 'event' | 'meal') => {
+    if (!selectedProject) return ''
+    const params = new URLSearchParams({ event: selectedProject.id })
+    if (kind === 'meal' && selectedMeal) params.set('meal', selectedMeal.id)
+    return `${window.location.origin}${window.location.pathname}?${params.toString()}`
+  }
+
+  const shareTitle = (kind: 'event' | 'meal') =>
+    kind === 'meal' && selectedMeal ? `${selectedProject?.name}: ${selectedMeal.title}` : selectedProject?.name ?? ''
+
+  const shareVia = (channel: 'email' | 'sms') => {
+    if (!shareAnchor) return
+    const link = shareLink(shareAnchor.kind)
+    const title = shareTitle(shareAnchor.kind)
+    window.location.href =
+      channel === 'email'
+        ? `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(link)}`
+        : `sms:?&body=${encodeURIComponent(`${title} ${link}`)}`
+    setShareAnchor(null)
+  }
+
+  const copyShareLink = async () => {
+    if (!shareAnchor) return
+    try {
+      await navigator.clipboard.writeText(shareLink(shareAnchor.kind))
+      setShareCopied(true)
+      window.setTimeout(() => setShareCopied(false), 1500)
+    } catch {
+      setShareCopied(false)
+    }
+    setShareAnchor(null)
+  }
+
   const openEditEvent = () => {
     if (!selectedProject) return
     setEditForm({ kind: 'event', name: selectedProject.name, description: selectedProject.description })
@@ -895,6 +944,19 @@ function App() {
           </DialogActions>
         </Dialog>
       )}
+
+      <Menu anchorEl={shareAnchor?.el ?? null} open={Boolean(shareAnchor)} onClose={() => setShareAnchor(null)}>
+        <MenuItem onClick={() => shareVia('email')}>
+          <EmailOutlinedIcon fontSize="small" sx={{ mr: 1 }} /> Email
+        </MenuItem>
+        <MenuItem onClick={() => shareVia('sms')}>
+          <SmsOutlinedIcon fontSize="small" sx={{ mr: 1 }} /> Text message
+        </MenuItem>
+        <MenuItem onClick={copyShareLink}>
+          <ContentCopyIcon fontSize="small" sx={{ mr: 1 }} /> Copy link
+        </MenuItem>
+      </Menu>
+      <Snackbar open={shareCopied} message="Link copied" autoHideDuration={1500} />
 
       {editForm && selectedProject && (
         <Dialog open onClose={() => setEditForm(null)} maxWidth="xs" fullWidth>
@@ -1216,22 +1278,6 @@ function App() {
                   {selectedProject.name}
                 </Typography>
               </div>
-              <div className="project-actions">
-                {tourButton}
-                <Button
-                  type="button"
-                  variant="outlined"
-                  color="primary"
-                  className="secondary-button"
-                  startIcon={<EditOutlinedIcon fontSize="small" />}
-                  onClick={openEditEvent}
-                >
-                  Edit event
-                </Button>
-                <Button type="button" variant="outlined" color="primary" className="secondary-button" data-tour="nav-back" onClick={() => setView('dashboard')}>
-                  ← Dashboard
-                </Button>
-              </div>
             </div>
             <div className="meal-header-metadata">
               <span>{selectedProject.meals.filter((m) => !isPastMeal(m)).length} upcoming meals</span>
@@ -1242,6 +1288,34 @@ function App() {
                 {selectedProject.attendees.filter((a) => a.ageGroup === 'kid').length} kids,{' '}
                 {selectedProject.attendees.filter((a) => a.ageGroup === 'toddler').length} toddlers)
               </span>
+            </div>
+            <div className="project-actions event-actions-bar">
+              {tourButton}
+              <Button
+                type="button"
+                variant="outlined"
+                color="primary"
+                className="secondary-button icon-on-phone"
+                startIcon={<EditOutlinedIcon fontSize="small" />}
+                aria-label="Edit event"
+                onClick={openEditEvent}
+              >
+                <span className="btn-label">Edit event</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outlined"
+                color="primary"
+                className="secondary-button icon-on-phone"
+                startIcon={<ShareOutlinedIcon fontSize="small" />}
+                aria-label="Share event"
+                onClick={(e) => setShareAnchor({ el: e.currentTarget, kind: 'event' })}
+              >
+                <span className="btn-label">Share</span>
+              </Button>
+              <Button type="button" variant="outlined" color="primary" className="secondary-button" data-tour="nav-back" onClick={() => setView('dashboard')}>
+                ← Dashboard
+              </Button>
             </div>
           </Paper>
 
@@ -1718,22 +1792,34 @@ function App() {
                 </div>
                 {selectedMeal.dietarySummary && <div className="meal-header-notes">{selectedMeal.dietarySummary}</div>}
               </div>
-              <div className="project-actions meal-header-actions">
-                {tourButton}
-                <Button
-                  type="button"
-                  variant="outlined"
-                  color="primary"
-                  className="secondary-button"
-                  startIcon={<EditOutlinedIcon fontSize="small" />}
-                  onClick={openEditMeal}
-                >
-                  Edit meal
-                </Button>
-                <Button type="button" variant="outlined" color="primary" className="secondary-button" data-tour="nav-back" onClick={() => setView('project')}>
-                  ← Event
-                </Button>
-              </div>
+            </div>
+            <div className="project-actions event-actions-bar">
+              {tourButton}
+              <Button
+                type="button"
+                variant="outlined"
+                color="primary"
+                className="secondary-button icon-on-phone"
+                startIcon={<EditOutlinedIcon fontSize="small" />}
+                aria-label="Edit meal"
+                onClick={openEditMeal}
+              >
+                <span className="btn-label">Edit meal</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outlined"
+                color="primary"
+                className="secondary-button icon-on-phone"
+                startIcon={<ShareOutlinedIcon fontSize="small" />}
+                aria-label="Share meal"
+                onClick={(e) => setShareAnchor({ el: e.currentTarget, kind: 'meal' })}
+              >
+                <span className="btn-label">Share</span>
+              </Button>
+              <Button type="button" variant="outlined" color="primary" className="secondary-button" data-tour="nav-back" onClick={() => setView('project')}>
+                ← Event
+              </Button>
             </div>
           </Paper>
 
