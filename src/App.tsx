@@ -691,14 +691,18 @@ function App() {
   const shareTitle = (kind: 'event' | 'meal') =>
     kind === 'meal' && selectedMeal ? `${selectedProject?.name}: ${selectedMeal.title}` : selectedProject?.name ?? ''
 
+  const shareIntro = (kind: 'event' | 'meal') =>
+    kind === 'meal' && selectedMeal
+      ? `Check out the meal plan for ${selectedMeal.title}`
+      : `Check out ${selectedProject?.name ?? 'our'} meals`
+
   const shareVia = (channel: 'email' | 'sms') => {
     if (!shareAnchor) return
-    const link = shareLink(shareAnchor.kind)
-    const title = shareTitle(shareAnchor.kind)
+    const message = `${shareIntro(shareAnchor.kind)}\n${shareLink(shareAnchor.kind)}`
     window.location.href =
       channel === 'email'
-        ? `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(link)}`
-        : `sms:?&body=${encodeURIComponent(`${title} ${link}`)}`
+        ? `mailto:?subject=${encodeURIComponent(shareTitle(shareAnchor.kind))}&body=${encodeURIComponent(message)}`
+        : `sms:?&body=${encodeURIComponent(message)}`
     setShareAnchor(null)
   }
 
