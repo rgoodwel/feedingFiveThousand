@@ -683,7 +683,9 @@ function App() {
     if (!selectedProject) return ''
     const params = new URLSearchParams({ event: selectedProject.id })
     if (kind === 'meal' && selectedMeal) params.set('meal', selectedMeal.id)
-    return `${window.location.origin}${window.location.pathname}?${params.toString()}`
+    // production links go through /s so previews can show the event or meal name
+    const path = import.meta.env.PROD ? '/s' : window.location.pathname
+    return `${window.location.origin}${path}?${params.toString()}`
   }
 
   const shareTitle = (kind: 'event' | 'meal') =>
