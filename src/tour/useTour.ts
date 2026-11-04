@@ -37,13 +37,17 @@ export function useTour(view: TourView, enabled: boolean) {
       steps,
       showProgress: true,
       allowClose: true,
-      smoothScroll: true,
+      smoothScroll: false,
       stagePadding: 6,
       stageRadius: 10,
       popoverClass: 'ff-tour-popover',
       nextBtnText: 'Next',
       prevBtnText: 'Back',
       doneBtnText: 'Done',
+      // The popover is measured while the page is still scrolling; re-position once it settles
+      onHighlighted: () => {
+        window.setTimeout(() => driverRef.current?.refresh(), 150)
+      },
       onDestroyed: () => {
         markSeen(view)
         driverRef.current = null

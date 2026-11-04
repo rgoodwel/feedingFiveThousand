@@ -409,11 +409,10 @@ function App() {
 
   const currentProjectUnlocked = selectedProject ? isProjectUnlocked(selectedProject, projectAccess) : true
 
-  const tourView: TourView = view === 'meal' ? 'meal' : view === 'project' ? 'project' : 'dashboard'
+  const tourView: TourView = view === 'meal' ? 'meal' : 'project'
   const tourReady =
     !deleteTarget &&
-    (view === 'dashboard' ||
-      (view === 'project' && Boolean(selectedProject) && currentProjectUnlocked) ||
+    ((view === 'project' && Boolean(selectedProject) && currentProjectUnlocked) ||
       (view === 'meal' && Boolean(selectedMeal)))
   const { startTour } = useTour(tourView, tourReady)
   const tourButton = (
@@ -909,7 +908,6 @@ function App() {
           </Box>
 
           <Box className="topbar-actions" sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
-            {tourButton}
             <Chip
               label={`Events ${projects.length}`}
               color="primary"
@@ -1186,7 +1184,6 @@ function App() {
                   variant="contained"
                   color="primary"
                   className="primary-button"
-                  data-tour="dash-create-event"
                   startIcon={<AddIcon />}
                   onClick={() => setShowCreateEventForm(true)}
                 >
@@ -1196,7 +1193,6 @@ function App() {
             ) : (
               <form
                 className="create-event-form"
-                data-tour="dash-create-event"
                 onSubmit={(event) => {
                   event.preventDefault()
                   createProject()
@@ -1278,7 +1274,8 @@ function App() {
       {view === 'project' && selectedProject && currentProjectUnlocked && (
         <main className="detail-stack">
           <Paper className="panel" elevation={0} sx={{ p: 2, borderRadius: 3 }}>
-            <div className="project-header-row" data-tour="event-header">
+            <div data-tour="event-header">
+            <div className="project-header-row">
               <div>
                 <Typography variant="h2" sx={{ m: 0, fontSize: '1.7rem' }}>
                   {selectedProject.name}
@@ -1293,6 +1290,7 @@ function App() {
                 {selectedProject.attendees.filter((a) => a.ageGroup === 'adult').length} adults,{' '}
                 {selectedProject.attendees.filter((a) => a.ageGroup === 'kid').length} kids)
               </span>
+            </div>
             </div>
             <div className="project-actions event-actions-bar">
               {tourButton}
@@ -1313,6 +1311,7 @@ function App() {
                 color="primary"
                 className="secondary-button icon-on-phone"
                 startIcon={<ShareOutlinedIcon fontSize="small" />}
+                data-tour="event-share"
                 aria-label="Share event"
                 onClick={(e) => setShareAnchor({ el: e.currentTarget, kind: 'event' })}
               >
@@ -1529,7 +1528,7 @@ function App() {
             )}
           </Paper>
 
-          <Paper className="panel compact-section" elevation={0} sx={{ p: 2, borderRadius: 3 }}>
+          <Paper className="panel compact-section" data-tour="event-guests" elevation={0} sx={{ p: 2, borderRadius: 3 }}>
             <div className="section-header compact-header">
               <Button
                 type="button"
@@ -1817,6 +1816,7 @@ function App() {
                 color="primary"
                 className="secondary-button icon-on-phone"
                 startIcon={<ShareOutlinedIcon fontSize="small" />}
+                data-tour="meal-share"
                 aria-label="Share meal"
                 onClick={(e) => setShareAnchor({ el: e.currentTarget, kind: 'meal' })}
               >
