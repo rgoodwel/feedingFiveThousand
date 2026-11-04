@@ -27,6 +27,8 @@ import AddIcon from '@mui/icons-material/Add'
 import CheckIcon from '@mui/icons-material/Check'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import CloseIcon from '@mui/icons-material/Close'
+import ExpandLessIcon from '@mui/icons-material/ExpandLess'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import HelpOutlineIcon from '@mui/icons-material/HelpOutlineOutlined'
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined'
@@ -45,6 +47,8 @@ import {
   type FoodCategory,
 } from './data/sampleData'
 import { loadProjects, persistProjects, usesSupabase } from './lib/projectService'
+
+const isPhone = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 700px)').matches
 
 const ageGroupOptions: AgeGroup[] = ['toddler', 'kid', 'adult']
 
@@ -118,6 +122,76 @@ const withResponsibleAttending = (meal: Meal, attendeeId?: string): Meal =>
         assignedAttendeeIds: [...meal.assignedAttendeeIds, attendeeId],
         attendeeCount: meal.assignedAttendeeIds.length + 1,
       }
+
+interface ResponsibleFieldProps {
+  guests: Attendee[]
+  mealGuestIds: string[]
+  value: string
+  onChange: (guestId: string) => void
+  required?: boolean
+  placeholder?: string
+}
+
+// Type to filter guests (by first or last name) or open the list; short "First L." display on phones when not editing.
+function ResponsibleField({ guests, mealGuestIds, value, onChange, required, placeholder }: ResponsibleFieldProps) {
+  const [focused, setFocused] = useState(false)
+  const [text, setText] = useState('')
+  const selected = guests.find((guest) => guest.id === value) ?? null
+  const fullName = (guest: Attendee) => `${guest.firstName} ${guest.lastName}`.trim()
+  const idleText = selected ? fullName(selected) : ''
+
+  return (
+    <Autocomplete
+      size="small"
+      fullWidth
+      autoHighlight
+      selectOnFocus
+      openOnFocus
+      disableClearable={required}
+      options={guests}
+      value={selected}
+      inputValue={focused ? text : idleText}
+      getOptionLabel={fullName}
+      isOptionEqualToValue={(option, current) => option.id === current.id}
+      filterOptions={(options, state) => {
+        const words = state.inputValue.toLowerCase().split(/\s+/).filter(Boolean)
+        return options.filter((guest) => words.every((word) => fullName(guest).toLowerCase().includes(word)))
+      }}
+      onFocus={() => {
+        setFocused(true)
+        setText(selected ? fullName(selected) : '')
+      }}
+      onBlur={() => setFocused(false)}
+      onInputChange={(_event, next, reason) => {
+        if (reason === 'input') setText(next)
+      }}
+      onChange={(_event, guest) => onChange(guest?.id ?? '')}
+      renderOption={(props, guest) => {
+        const { key, ...rest } = props as typeof props & { key: string }
+        return (
+          <li key={key} {...rest}>
+            {fullName(guest)}
+            {mealGuestIds.includes(guest.id) ? '' : ' (add to meal)'}
+          </li>
+        )
+      }}
+      noOptionsText="No matching guests"
+      renderInput={(params) => (
+        <TextField
+          {...params}
+          variant="standard"
+          required={required}
+          placeholder={placeholder ?? 'Type a name…'}
+          slotProps={{
+            ...params.slotProps,
+            input: { ...params.slotProps?.input, disableUnderline: true, sx: { fontSize: '0.875rem' } },
+            htmlInput: { ...params.slotProps?.htmlInput, 'aria-label': 'Person responsible' },
+          }}
+        />
+      )}
+    />
+  )
+}
 
 const NEW_GUEST_OPTION = '__new_guest__'
 const SELECT_ALL_OPTION = '__select_all__'
@@ -196,7 +270,8 @@ function App() {
   const [draftAttendee, setDraftAttendee] = useState<AttendeeDraft | null>(null)
   const [showMealForm, setShowMealForm] = useState(false)
   const [showMealItemForm, setShowMealItemForm] = useState(false)
-  const [showAttendees, setShowAttendees] = useState(true)
+  const [showAttendees, setShowAttendees] = useState(() => !isPhone())
+  const [showMealGuests, setShowMealGuests] = useState(() => !isPhone())
   const [guestPickerOpen, setGuestPickerOpen] = useState(false)
   const [pendingGuestIds, setPendingGuestIds] = useState<string[]>([])
   const [mealGuestDraft, setMealGuestDraft] = useState<AttendeeDraft | null>(null)
@@ -207,6 +282,38 @@ function App() {
   useEffect(() => {
     if (hydrated) void persistProjects(projects)
   }, [projects, hydrated])
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [view, selectedProjectId, selectedMealId])
+
+  // Bring a newly opened form fully into view (including Save/Cancel) so no manual scrolling is needed.
+  const formOpenKey = [
+    showCreateEventForm,
+    showMealForm,
+    showMealItemForm,
+    guestPickerOpen,
+    Boolean(draftAttendee),
+    Boolean(mealGuestDraft),
+  ].join()
+  useEffect(() => {
+    if (!formOpenKey.includes('true')) return
+    const timer = window.setTimeout(() => {
+      const forms = document.querySelectorAll<HTMLElement>('.create-event-form, .draft-row, .guest-picker-row')
+      const form = forms[forms.length - 1]
+      if (!form) return
+      const rect = form.getBoundingClientRect()
+      const margin = 12
+      if (rect.height > window.innerHeight - margin * 2) {
+        window.scrollBy({ top: rect.top - margin, behavior: 'smooth' })
+      } else if (rect.bottom > window.innerHeight - margin) {
+        window.scrollBy({ top: rect.bottom - window.innerHeight + margin, behavior: 'smooth' })
+      } else if (rect.top < margin) {
+        window.scrollBy({ top: rect.top - margin, behavior: 'smooth' })
+      }
+    }, 80)
+    return () => window.clearTimeout(timer)
+  }, [formOpenKey])
 
   useEffect(() => {
     setShowCreateEventForm(false)
@@ -1353,7 +1460,7 @@ function App() {
                 onClick={() => setShowAttendees((current) => !current)}
                 sx={{ minWidth: 0, px: 0.5, py: 0.25, fontWeight: 700, color: 'text.primary' }}
               >
-                {showAttendees ? 'Hide guests' : 'Manage guests'}
+                {showAttendees ? 'Hide guests' : `Manage guests (${selectedProject.attendees.length})`}
               </Button>
             </div>
 
@@ -1699,24 +1806,14 @@ function App() {
                         />
                       </TableCell>
                       <TableCell data-label="Responsible">
-                        <TextField
-                          {...inlineFieldProps}
-                          select
+                        <ResponsibleField
                           required
+                          guests={selectedProject.attendees}
+                          mealGuestIds={selectedMeal.assignedAttendeeIds}
                           value={mealItemForm.personResponsible}
-                          onChange={(event) => setMealItemForm((current) => ({ ...current, personResponsible: event.target.value }))}
-                          slotProps={{ ...inlineFieldProps.slotProps, select: { displayEmpty: true } }}
-                        >
-                          <MenuItem value="" disabled>
-                            Select guest…
-                          </MenuItem>
-                          {selectedProject.attendees.map((attendee) => (
-                            <MenuItem key={attendee.id} value={attendee.id}>
-                              {attendee.firstName} {attendee.lastName}
-                              {selectedMeal.assignedAttendeeIds.includes(attendee.id) ? '' : ' (add to meal)'}
-                            </MenuItem>
-                          ))}
-                        </TextField>
+                          placeholder="Type a name…"
+                          onChange={(guestId) => setMealItemForm((current) => ({ ...current, personResponsible: guestId }))}
+                        />
                       </TableCell>
                       <TableCell data-actions="true" align="right" sx={{ whiteSpace: 'nowrap' }}>
                         <IconButton
@@ -1788,50 +1885,24 @@ function App() {
                         />
                       </TableCell>
                       <TableCell data-label="Responsible">
-                        <TextField
-                          {...inlineFieldProps}
-                          select
+                        <ResponsibleField
+                          guests={selectedProject.attendees}
+                          mealGuestIds={selectedMeal.assignedAttendeeIds}
                           value={item.personResponsible}
-                          onChange={(event) => updateMealItem(selectedMeal.id, item.id, { personResponsible: event.target.value })}
-                          slotProps={{
-                            ...inlineFieldProps.slotProps,
-                            select: {
-                              displayEmpty: true,
-                              renderValue: (value) => {
-                                const guest = selectedProject.attendees.find((attendee) => attendee.id === value)
-                                if (!guest) return <em>Unassigned</em>
-                                const initial = guest.lastName.trim().charAt(0)
-                                return (
-                                  <>
-                                    <span className="name-full">{guest.firstName} {guest.lastName}</span>
-                                    <span className="name-short">{guest.firstName}{initial ? ` ${initial}.` : ''}</span>
-                                  </>
-                                )
-                              },
-                            },
-                          }}
-                        >
-                          <MenuItem value="">
-                            <em>Unassigned</em>
-                          </MenuItem>
-                          {selectedProject.attendees.map((attendee) => (
-                            <MenuItem key={attendee.id} value={attendee.id}>
-                              {attendee.firstName} {attendee.lastName}
-                              {selectedMeal.assignedAttendeeIds.includes(attendee.id) ? '' : ' (add to meal)'}
-                            </MenuItem>
-                          ))}
-                        </TextField>
+                          placeholder="Unassigned"
+                          onChange={(guestId) => updateMealItem(selectedMeal.id, item.id, { personResponsible: guestId })}
+                        />
                       </TableCell>
                       <TableCell data-actions="true" align="right">
                         <IconButton
-                              className="row-info-button"
-                              size="small"
-                              aria-label={`Show details for ${item.name || 'item'}`}
-                              aria-expanded={expandedRows.has(item.id)}
-                              onClick={() => toggleRow(item.id)}
-                            >
-                              <InfoOutlinedIcon fontSize="small" />
-                            </IconButton>
+                          className="row-info-button"
+                          size="small"
+                          aria-label={`Show details for ${item.name || 'item'}`}
+                          aria-expanded={expandedRows.has(item.id)}
+                          onClick={() => toggleRow(item.id)}
+                        >
+                          <InfoOutlinedIcon fontSize="small" />
+                        </IconButton>
                             
                         <IconButton
                           size="small"
@@ -1852,9 +1923,17 @@ function App() {
           </Paper>
 
           <Paper className="panel" elevation={0} sx={{ p: 2, borderRadius: 3 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
+            <Button
+              type="button"
+              variant="text"
+              fullWidth
+              onClick={() => setShowMealGuests((current) => !current)}
+              endIcon={showMealGuests ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+              sx={{ justifyContent: 'space-between', px: 0.5, py: 0.5, fontWeight: 700, color: 'text.primary', textAlign: 'left' }}
+            >
               Attending guests ({mealAttendees.length} of {selectedProject.attendees.length} Event Guests)
-            </Typography>
+            </Button>
+            {showMealGuests && (
             <TableContainer data-tour="meal-attending-table">
               <Table size="small" className="items-table meal-guests-table">
                 <TableHead>
@@ -2078,6 +2157,7 @@ function App() {
                 </TableBody>
               </Table>
             </TableContainer>
+            )}
           </Paper>
         </main>
       )}
