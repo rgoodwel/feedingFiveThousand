@@ -70,7 +70,7 @@ const normalizeProjectBase = (project: Record<string, any>): Project => ({
           id: String(attendee.id ?? crypto.randomUUID()),
           firstName: String(attendee.firstName ?? attendee.first_name ?? legacyFirst),
           lastName: String(attendee.lastName ?? attendee.last_name ?? legacyRest.join(' ')),
-          ageGroup: (['toddler', 'kid', 'adult'].includes(ageGroup) ? ageGroup : 'adult') as AgeGroup,
+          ageGroup: (ageGroup === 'toddler' ? 'kid' : ['kid', 'adult'].includes(ageGroup) ? ageGroup : 'adult') as AgeGroup,
           dietaryRestrictions: Array.isArray(attendee.dietaryRestrictions)
             ? attendee.dietaryRestrictions.map((item) => String(item))
             : Array.isArray(attendee.dietary_restrictions)

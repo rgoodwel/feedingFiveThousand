@@ -2,7 +2,7 @@ export type VisibilityMode = 'public' | 'public-password' | 'private-password';
 export type MealCategory = 'breakfast' | 'lunch' | 'dinner';
 export type FoodCategory = 'drink' | 'app' | 'salad' | 'main' | 'side' | 'dessert';
 
-export type AgeGroup = 'toddler' | 'kid' | 'adult';
+export type AgeGroup = 'kid' | 'adult';
 
 export interface Attendee {
   id: string;
@@ -61,7 +61,7 @@ export const sampleProjects: Project[] = [
       { id: 'att-1', firstName: 'Avery', lastName: 'Lindqvist', ageGroup: 'adult', dietaryRestrictions: ['vegetarian'] },
       { id: 'att-2', firstName: 'Ben', lastName: 'Okafor', ageGroup: 'adult', dietaryRestrictions: ['gluten-free'] },
       { id: 'att-3', firstName: 'Casey', lastName: 'Moreno', ageGroup: 'kid', dietaryRestrictions: ['nut-free', 'dairy-free'] },
-      { id: 'att-4', firstName: 'Drew', lastName: 'Patel', ageGroup: 'toddler', dietaryRestrictions: ['none'] },
+      { id: 'att-4', firstName: 'Drew', lastName: 'Patel', ageGroup: 'kid', dietaryRestrictions: ['none'] },
       { id: 'att-8', firstName: 'Elena', lastName: 'Lindqvist', ageGroup: 'adult', dietaryRestrictions: ['none'] },
       { id: 'att-9', firstName: 'Marcus', lastName: 'Okafor', ageGroup: 'adult', dietaryRestrictions: ['none'] },
       { id: 'att-10', firstName: 'Sofia', lastName: 'Moreno', ageGroup: 'adult', dietaryRestrictions: ['dairy-free'] },
@@ -69,7 +69,7 @@ export const sampleProjects: Project[] = [
       { id: 'att-12', firstName: 'Nina', lastName: 'Patel', ageGroup: 'adult', dietaryRestrictions: ['vegetarian'] },
       { id: 'att-13', firstName: 'Omar', lastName: 'Patel', ageGroup: 'kid', dietaryRestrictions: ['nut-free'] },
       { id: 'att-14', firstName: 'Ruby', lastName: 'Okafor', ageGroup: 'kid', dietaryRestrictions: ['none'] },
-      { id: 'att-15', firstName: 'Theo', lastName: 'Lindqvist', ageGroup: 'toddler', dietaryRestrictions: ['dairy-free'] },
+      { id: 'att-15', firstName: 'Theo', lastName: 'Lindqvist', ageGroup: 'kid', dietaryRestrictions: ['dairy-free'] },
       { id: 'att-16', firstName: 'Hannah', lastName: 'Brooks', ageGroup: 'adult', dietaryRestrictions: ['gluten-free'] },
       { id: 'att-17', firstName: 'Jonah', lastName: 'Brooks', ageGroup: 'adult', dietaryRestrictions: ['none'] },
     ],
@@ -359,7 +359,7 @@ export const sampleProjects: Project[] = [
       { id: 'att-20', firstName: 'Ivy', lastName: 'Nair', ageGroup: 'kid', dietaryRestrictions: ['none'] },
       { id: 'att-21', firstName: 'Carlos', lastName: 'Mendez', ageGroup: 'adult', dietaryRestrictions: ['none'] },
       { id: 'att-22', firstName: 'Lucia', lastName: 'Mendez', ageGroup: 'adult', dietaryRestrictions: ['vegan'] },
-      { id: 'att-23', firstName: 'Mateo', lastName: 'Mendez', ageGroup: 'toddler', dietaryRestrictions: ['none'] },
+      { id: 'att-23', firstName: 'Mateo', lastName: 'Mendez', ageGroup: 'kid', dietaryRestrictions: ['none'] },
       { id: 'att-24', firstName: 'Grace', lastName: 'Kim', ageGroup: 'adult', dietaryRestrictions: ['none'] },
       { id: 'att-25', firstName: 'Eli', lastName: 'Kim', ageGroup: 'kid', dietaryRestrictions: ['nut-free'] },
     ],

@@ -17,7 +17,7 @@ create table if not exists attendees (
   name text not null,
   first_name text not null default '',
   last_name text not null default '',
-  age_group text not null default 'adult' check (age_group in ('toddler', 'kid', 'adult')),
+  age_group text not null default 'adult' check (age_group in ('kid', 'adult')),
   dietary_restrictions text[] not null default '{}',
   created_at timestamptz not null default now()
 );
@@ -25,7 +25,7 @@ create table if not exists attendees (
 -- upgrade path for databases created before first/last name and age group existed
 alter table attendees add column if not exists first_name text not null default '';
 alter table attendees add column if not exists last_name text not null default '';
-alter table attendees add column if not exists age_group text not null default 'adult' check (age_group in ('toddler', 'kid', 'adult'));
+alter table attendees add column if not exists age_group text not null default 'adult' check (age_group in ('kid', 'adult'));
 
 create table if not exists meals (
   id uuid primary key default gen_random_uuid(),
@@ -75,3 +75,8 @@ for each row execute procedure update_updated_at_column();
 create trigger set_meals_updated_at
 before update on meals
 for each row execute procedure update_updated_at_column();
+
+-- merge the retired 'toddler' age group into 'kid'
+alter table attendees drop constraint if exists attendees_age_group_check;
+update attendees set age_group = 'kid' where age_group = 'toddler';
+alter table attendees add constraint attendees_age_group_check check (age_group in ('kid', 'adult'));

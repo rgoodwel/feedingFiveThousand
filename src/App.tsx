@@ -56,7 +56,7 @@ import { loadProjects, persistProjects, usesSupabase } from './lib/projectServic
 
 const isPhone = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 700px)').matches
 
-const ageGroupOptions: AgeGroup[] = ['toddler', 'kid', 'adult']
+const ageGroupOptions: AgeGroup[] = ['kid', 'adult']
 
 interface AttendeeDraft {
   firstName: string
@@ -394,7 +394,7 @@ function App() {
     [selectedProject, selectedMeal],
   )
   const ageGroupCounts = useMemo(() => {
-    const counts: Record<AgeGroup, number> = { adult: 0, kid: 0, toddler: 0 }
+    const counts: Record<AgeGroup, number> = { adult: 0, kid: 0 }
     for (const attendee of mealAttendees) counts[attendee.ageGroup] += 1
     return counts
   }, [mealAttendees])
@@ -1291,8 +1291,7 @@ function App() {
               <span>
                 {selectedProject.attendees.length} {selectedProject.attendees.length === 1 ? 'guest' : 'guests'} (
                 {selectedProject.attendees.filter((a) => a.ageGroup === 'adult').length} adults,{' '}
-                {selectedProject.attendees.filter((a) => a.ageGroup === 'kid').length} kids,{' '}
-                {selectedProject.attendees.filter((a) => a.ageGroup === 'toddler').length} toddlers)
+                {selectedProject.attendees.filter((a) => a.ageGroup === 'kid').length} kids)
               </span>
             </div>
             <div className="project-actions event-actions-bar">
@@ -1793,7 +1792,7 @@ function App() {
                   <span>{selectedMeal.category}</span>
                   <span>
                     {mealAttendees.length} {mealAttendees.length === 1 ? 'guest' : 'guests'} ({ageGroupCounts.adult} adults,{' '}
-                    {ageGroupCounts.kid} kids, {ageGroupCounts.toddler} toddlers)
+                    {ageGroupCounts.kid} kids)
                   </span>
                 </div>
                 {selectedMeal.dietarySummary && <div className="meal-header-notes">{selectedMeal.dietarySummary}</div>}

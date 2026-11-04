@@ -38,7 +38,7 @@ export const tours: Record<TourView, DriveStep[]> = {
       element: '[data-tour="event-header"]',
       popover: {
         title: 'Your event summary',
-        description: 'Upcoming and past meals plus the guest count, broken down by adults, kids and toddlers.',
+        description: 'Upcoming and past meals plus the guest count, broken down by adults and kids.',
       },
     },
     {
