@@ -1363,11 +1363,13 @@ textarea {
     border-radius: 10px;
     border: 1px solid #c5d6f7;
     margin: 6px 0;
-    padding: 10px;
-    grid-template-columns: 1fr;
+    padding: 4px 6px 4px 10px;
+    grid-template-columns: 1fr auto;
+    align-items: center;
   }
 
-  .items-table .guest-picker-row > .MuiTableCell-root { grid-column: 1 !important; grid-row: auto !important; }
+  .items-table .guest-picker-row > .MuiTableCell-root { grid-column: auto !important; grid-row: 1 !important; }
+  .items-table .guest-picker-row > .MuiTableCell-root[colspan] { display: none; }
 
   .items-table .course-row {
     display: block;
@@ -1380,7 +1382,7 @@ textarea {
     padding: 6px 4px;
   }
 
-  .items-table .MuiTableRow-root:has(> .MuiTableCell-root[colspan]):not(.course-row) {
+  .items-table .MuiTableRow-root:has(> .MuiTableCell-root[colspan]):not(.course-row):not(.guest-picker-row) {
     display: block;
     background: rgba(31, 61, 92, 0.06);
     border: 0;
@@ -1389,7 +1391,7 @@ textarea {
     padding: 12px;
   }
 
-  .items-table .MuiTableRow-root:has(> .MuiTableCell-root[colspan]):not(.course-row) > .MuiTableCell-root {
+  .items-table .MuiTableRow-root:has(> .MuiTableCell-root[colspan]):not(.course-row):not(.guest-picker-row) > .MuiTableCell-root {
     grid-column: auto;
   }
 
@@ -1697,9 +1699,14 @@ textarea {
     min-height: 40px;
   }
 
+  .MuiDialog-root .MuiDialog-container {
+    align-items: flex-start !important;
+  }
+
   .MuiDialog-paper {
-    margin: 16px;
-    width: calc(100% - 32px);
+    margin: 8px !important;
+    width: calc(100% - 16px) !important;
+    max-height: calc(100% - 16px) !important;
   }
 }
 
@@ -1858,5 +1865,25 @@ textarea {
 
   .event-actions-bar > button:last-child {
     margin-left: 0;
+  }
+}
+
+/* Menu sections: a soft blue header band, matching the guest picker row */
+.meal-items-table .course-row > td {
+  color: #1a56c4;
+  background: #eef3fd;
+  font-size: 0.76rem;
+}
+
+@media (max-width: 700px) {
+  .meal-items-table .MuiTableBody-root .course-row {
+    background: #eef3fd;
+    border-radius: 8px;
+    margin-top: 8px;
+  }
+
+  .meal-items-table .MuiTableBody-root .course-row > td {
+    padding: 6px 10px;
+    background: transparent;
   }
 }

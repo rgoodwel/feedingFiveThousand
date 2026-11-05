@@ -63,15 +63,15 @@ export const tours: Record<TourView, DriveStep[]> = {
       popover: {
         title: 'Your menu',
         description:
-          'Items are grouped into Starters, Mains, Sides and Desserts. Click any cell to edit it in place. Changing the category moves the item to the right group.',
+          'Items are grouped into Starters, Mains, Sides and Desserts. Tap the pencil on a row to edit or delete an item. Changing the category moves the item to the right group.',
       },
     },
     {
-      element: '[data-tour="meal-attending-table"]',
+      element: '[data-tour="meal-guests-toggle"]',
       popover: {
-        title: 'Change or remove guests',
+        title: 'Who is attending',
         description:
-          'Swap a guest for another with the dropdown, or use the trash icon to remove them from this meal. Removing a guest also unassigns their items.',
+          'Open this section to manage who is attending this meal. Add guests from the event list or create new ones, and remove anyone who is not coming.',
       },
     },
     {
