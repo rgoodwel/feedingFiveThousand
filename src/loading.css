@@ -1,0 +1,53 @@
+.loading-shell {
+  box-sizing: border-box;
+  width: calc(100% - 28px);
+  margin: 18px auto;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.loading-panel {
+  padding: 18px;
+  margin-bottom: 10px;
+  border: 1px solid rgba(20, 40, 60, 0.14);
+  border-radius: 4px;
+  background: #fbfaf6;
+}
+
+.loading-line {
+  height: 14px;
+  margin: 0 0 12px;
+  border-radius: 6px;
+  background: #e6e3dd;
+  animation: loading-pulse 1.5s ease-in-out infinite;
+}
+
+.loading-title {
+  width: min(45%, 300px);
+  height: 28px;
+}
+
+.loading-subtitle {
+  width: min(65%, 460px);
+}
+
+.loading-short {
+  width: min(30%, 160px);
+}
+
+.loading-row {
+  height: 46px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+}
+
+.loading-panel .loading-line:last-child {
+  margin-bottom: 0;
+}
+
+@keyframes loading-pulse {
+  50% { opacity: 0.5; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-line { animation: none; }
+}

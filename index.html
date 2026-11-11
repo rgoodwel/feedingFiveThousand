@@ -14,9 +14,27 @@
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content="Feeding Five Thousand" />
     <meta name="twitter:description" content="Plan group meals, guests and who is bringing what." />
+    <link rel="stylesheet" href="/src/loading.css" />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <main class="loading-shell" role="status" aria-label="Loading meal planner" aria-busy="true">
+        <div class="loading-panel" aria-hidden="true">
+          <div class="loading-line loading-title"></div>
+          <div class="loading-line loading-subtitle"></div>
+        </div>
+        <div class="loading-panel" aria-hidden="true">
+          <div class="loading-line loading-short"></div>
+          <div class="loading-line loading-row"></div>
+          <div class="loading-line loading-row"></div>
+          <div class="loading-line loading-row"></div>
+        </div>
+        <div class="loading-panel" aria-hidden="true">
+          <div class="loading-line loading-short"></div>
+          <div class="loading-line loading-row"></div>
+        </div>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

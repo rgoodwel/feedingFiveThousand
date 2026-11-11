@@ -329,6 +329,8 @@ function App() {
   const [mealGuestDraft, setMealGuestDraft] = useState<AttendeeDraft | null>(null)
 
   const [hydrated, setHydrated] = useState(false)
+  const [loadError, setLoadError] = useState(false)
+  const [loadAttempt, setLoadAttempt] = useState(0)
 
   const scrollToEventSection = (section: HTMLDivElement | null) => {
     section?.scrollIntoView({
@@ -384,6 +386,7 @@ function App() {
       } catch (error) {
         // stay un-hydrated so a failed load can never overwrite remote data
         console.error(error)
+        if (mounted) setLoadError(true)
         return
       }
       if (!mounted) return
@@ -406,7 +409,7 @@ function App() {
     return () => {
       mounted = false
     }
-  }, [])
+  }, [loadAttempt])
 
 
   useEffect(() => {
@@ -462,6 +465,7 @@ function App() {
 
   const tourView: TourView = view === 'meal' ? 'meal' : 'project'
   const tourReady =
+    hydrated &&
     !deleteTarget &&
     ((view === 'project' && Boolean(selectedProject) && currentProjectUnlocked) ||
       (view === 'meal' && Boolean(selectedMeal)))
@@ -955,6 +959,44 @@ function App() {
     }
 
     setProjectPasswordInput('')
+  }
+
+  if (!hydrated) {
+    if (loadError) {
+      return (
+        <main className="app-shell">
+          <Alert severity="error" action={
+            <Button color="inherit" size="small" onClick={() => {
+              setLoadError(false)
+              setLoadAttempt((attempt) => attempt + 1)
+            }}>
+              Retry
+            </Button>
+          }>
+            Unable to load the meal planner. Please check your connection and try again.
+          </Alert>
+        </main>
+      )
+    }
+
+    return (
+      <main className="loading-shell" role="status" aria-label="Loading meal planner" aria-busy="true">
+        <div className="loading-panel" aria-hidden="true">
+          <div className="loading-line loading-title" />
+          <div className="loading-line loading-subtitle" />
+        </div>
+        <div className="loading-panel" aria-hidden="true">
+          <div className="loading-line loading-short" />
+          <div className="loading-line loading-row" />
+          <div className="loading-line loading-row" />
+          <div className="loading-line loading-row" />
+        </div>
+        <div className="loading-panel" aria-hidden="true">
+          <div className="loading-line loading-short" />
+          <div className="loading-line loading-row" />
+        </div>
+      </main>
+    )
   }
 
   return (
