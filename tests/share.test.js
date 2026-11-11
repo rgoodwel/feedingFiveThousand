@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import handler from '../api/share.js'
 
-test('shared meal previews contain an absolute image URL and preserve the app link', async () => {
+test('shared event and meal previews retain their titles without an image', async () => {
   const previousUrl = process.env.VITE_SUPABASE_URL
   const previousKey = process.env.VITE_SUPABASE_ANON_KEY
   const originalFetch = globalThis.fetch
@@ -34,16 +34,13 @@ test('shared meal previews contain an absolute image URL and preserve the app li
     assert.match(html, /name="twitter:title" content="Dinner - Family &amp; Friends"/)
     assert.doesNotMatch(html, /http-equiv="refresh"/i)
     assert.ok(html.includes(`location.replace("/?event=${eventId}&meal=${mealId}")`))
-    assert.match(html, /property="og:image" content="https:\/\/meals\.example\.com\/icon-512\.png"/)
-    assert.match(html, /name="twitter:image" content="https:\/\/meals\.example\.com\/icon-512\.png"/)
-    assert.match(html, /property="og:image:width" content="512"/)
-    assert.match(html, /property="og:image:height" content="512"/)
+    assert.doesNotMatch(html, /(?:og|twitter):image/i)
     assert.match(html, /name="twitter:card" content="summary"/)
     assert.ok(html.includes(`/?event=${eventId}&amp;meal=${mealId}`))
     await handler({ url: `/s?event=${eventId}`, headers: { host: 'meals.example.com' } }, res)
     assert.match(html, /property="og:title" content="Family &amp; Friends"/)
     assert.match(html, /name="twitter:title" content="Family &amp; Friends"/)
-    assert.match(html, /property="og:image" content="https:\/\/meals\.example\.com\/icon-512\.png"/)
+    assert.doesNotMatch(html, /(?:og|twitter):image/i)
     assert.match(html, /name="twitter:card" content="summary"/)
   } finally {
     globalThis.fetch = originalFetch

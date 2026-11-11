@@ -56,7 +56,6 @@ export default async function handler(req, res) {
   if (UUID.test(eventId)) params.set('event', eventId)
   if (UUID.test(mealId)) params.set('meal', mealId)
   const target = `/?${params.toString()}`
-  const imageUrl = new URL('/icon-512.png', url.origin).href
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8')
   res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=3600')
@@ -70,14 +69,9 @@ export default async function handler(req, res) {
 <meta property="og:site_name" content="Feeding Five Thousand" />
 <meta property="og:title" content="${esc(title)}" />
 <meta property="og:description" content="${esc(description)}" />
-<meta property="og:image" content="${esc(imageUrl)}" />
-<meta property="og:image:width" content="512" />
-<meta property="og:image:height" content="512" />
-<meta property="og:image:alt" content="Feeding Five Thousand icon" />
 <meta name="twitter:card" content="summary" />
 <meta name="twitter:title" content="${esc(title)}" />
 <meta name="twitter:description" content="${esc(description)}" />
-<meta name="twitter:image" content="${esc(imageUrl)}" />
 </head>
 <body>
 <script>location.replace(${JSON.stringify(target)})</script>
