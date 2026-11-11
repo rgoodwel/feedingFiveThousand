@@ -729,6 +729,11 @@ textarea {
   border-bottom: none;
 }
 
+.items-table .MuiTableBody-root :is(.item-row, .guest-row) > .MuiTableCell-root {
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+
 .items-table .MuiTableCell-head {
   padding: 4px 12px 8px;
   font-size: 0.7rem;
@@ -751,8 +756,8 @@ textarea {
   transition: background-color 0.15s ease;
 }
 
-.items-table .MuiTableBody-root .MuiTableRow-root:hover > .MuiTableCell-root,
-.items-table .MuiTableBody-root .MuiTableRow-root:focus-within > .MuiTableCell-root {
+.items-table .MuiTableBody-root .MuiTableRow-hover:hover > .MuiTableCell-root,
+.items-table .MuiTableBody-root .MuiTableRow-hover:focus-within > .MuiTableCell-root {
   background: rgba(31, 61, 92, 0.045);
 }
 
@@ -1175,6 +1180,11 @@ textarea {
   cursor: pointer;
 }
 
+.past-meals-table .past-meal-table-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
 .past-meals-table .past-meal-chip {
   margin-left: 10px;
   height: 20px;
@@ -1314,6 +1324,16 @@ textarea {
     border: 0;
     border-radius: 0;
     background: transparent;
+  }
+
+  .items-table .MuiTableBody-root :is(.item-row, .guest-row) {
+    padding: 3px 4px;
+    border-bottom: 0;
+  }
+
+  .items-table .MuiTableBody-root :is(.item-row, .guest-row) > .MuiTableCell-root {
+    padding-top: 0;
+    padding-bottom: 0;
   }
 
   .items-table .MuiTableCell-root:empty {

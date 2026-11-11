@@ -1869,7 +1869,7 @@ function App() {
                     {sortedEventAttendees.map((attendee) => {
                       const fullName = `${attendee.firstName} ${attendee.lastName}`.trim()
                       return (
-                        <TableRow key={attendee.id} hover className={expandedRows.has(attendee.id) ? 'row-expanded' : undefined}>
+                        <TableRow key={attendee.id} className={`guest-row${expandedRows.has(attendee.id) ? ' row-expanded' : ''}`}>
                           <TableCell data-label="First name">{attendee.firstName}</TableCell>
                           <TableCell data-label="Last name">{attendee.lastName}</TableCell>
                           <TableCell data-label="Age group">{attendee.ageGroup}</TableCell>
@@ -1938,7 +1938,6 @@ function App() {
                         {pastMealList.map((meal) => (
                           <TableRow
                             key={meal.id}
-                            hover
                             tabIndex={0}
                             className="past-meal-table-row"
                             onClick={() => openMeal(selectedProject.id, meal.id)}
@@ -2140,7 +2139,6 @@ function App() {
                         {groupItems.map((item) => (
                     <TableRow
                       key={item.id}
-                      hover
                       className={`item-row course-${group.label.toLowerCase()}${expandedRows.has(item.id) ? ' row-expanded' : ''}`}
                     >
                       <TableCell data-label="Item">{item.name}</TableCell>
@@ -2386,7 +2384,7 @@ function App() {
                   )}
 
                   {mealAttendees.map((attendee) => (
-                    <TableRow key={attendee.id} hover className={expandedRows.has(`meal-${attendee.id}`) ? 'row-expanded' : undefined}>
+                    <TableRow key={attendee.id} className={`guest-row${expandedRows.has(`meal-${attendee.id}`) ? ' row-expanded' : ''}`}>
                       <TableCell data-label="Guest">
                         {attendee.firstName} {attendee.lastName}
                       </TableCell>
