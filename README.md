@@ -11,6 +11,7 @@ A device-agnostic group meal planning app for projects/events with reusable atte
   - public with password
   - private with password
 - Reusable attendee directory with dietary restrictions
+- Branded home-screen icons and link-preview images for shared events and meals
 - Guest first and last names must be unique within an event, ignoring capitalization and extra whitespace. Add an existing event guest to a meal using the guest selector.
 - Meal date, time, category, attendee count, and dietary summary
 - Meal items with name, description, category, and person responsible
@@ -49,6 +50,14 @@ npm run dev -- --host 0.0.0.0
 ```bash
 npm run build
 ```
+
+The app's home-screen icons and share preview use the artwork in `public/app-icon.svg`.
+If the artwork changes, regenerate `apple-touch-icon.png`, `icon-192.png`, and `icon-512.png`
+before deploying. Share previews use the square icon and the event or meal name; their layout
+depends on the messaging app.
+Event and meal previews are served by the `/s` rewrite in production.
+The preview page uses JavaScript to open the app so link-preview crawlers can read its event or meal title.
+Vercel builds also use its system domain variables to make the homepage preview image URL absolute.
 
 ## Security note
 
