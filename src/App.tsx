@@ -319,6 +319,7 @@ function App() {
   const [showMealForm, setShowMealForm] = useState(false)
   const [showMealItemForm, setShowMealItemForm] = useState(false)
   const [showAttendees, setShowAttendees] = useState(() => !isPhone())
+  const [showPastMeals, setShowPastMeals] = useState(() => !isPhone())
   const [showMealGuests, setShowMealGuests] = useState(() => !isPhone())
   const upcomingMealsRef = useRef<HTMLDivElement>(null)
   const pastMealsRef = useRef<HTMLDivElement>(null)
@@ -1499,7 +1500,10 @@ function App() {
               <button type="button" onClick={() => scrollToEventSection(upcomingMealsRef.current)}>
                 {selectedProject.meals.filter((m) => !isPastMeal(m)).length} upcoming meals
               </button>
-              <button type="button" onClick={() => scrollToEventSection(pastMealsRef.current)}>
+              <button type="button" onClick={() => {
+                setShowPastMeals(true)
+                scrollToEventSection(pastMealsRef.current)
+              }}>
                 {selectedProject.meals.filter((m) => isPastMeal(m)).length} past meals
               </button>
               <button type="button" onClick={() => {
@@ -1543,7 +1547,7 @@ function App() {
             </div>
           </Paper>
 
-          <Paper ref={upcomingMealsRef} className="panel event-section-target" elevation={0} sx={{ p: 2 }}>
+          <Paper ref={upcomingMealsRef} className="panel open-section upcoming-meals-section event-section-target" elevation={0} sx={{ p: 2 }}>
             <Typography variant="subtitle1" className="section-title" sx={{ mb: 0.5 }}>
               Upcoming meals ({selectedProject.meals.filter((meal) => !isPastMeal(meal)).length})
             </Typography>
@@ -1553,6 +1557,7 @@ function App() {
               )}
               {selectedProject.meals
                 .filter((meal) => !isPastMeal(meal))
+                .sort((a, b) => a.date.localeCompare(b.date) || (a.startTime || '00:00').localeCompare(b.startTime || '00:00'))
                 .map((meal) => (
                   <Card key={meal.id} className="project-card" data-tour="event-meal-tile" sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
                     <CardActionArea onClick={() => openMeal(selectedProject.id, meal.id)} sx={{ p: 0, height: '100%', alignItems: 'stretch' }}>
@@ -1751,23 +1756,27 @@ function App() {
             )}
           </Paper>
 
-          <Paper ref={eventGuestsRef} className="panel compact-section event-section-target" data-tour="event-guests" elevation={0} sx={{ p: 2 }}>
+          <Paper ref={eventGuestsRef} className="panel open-section compact-section event-section-target" data-tour="event-guests" elevation={0} sx={{ p: 2 }}>
             <div className="section-header compact-header">
               <Button
                 type="button"
                 variant="text"
                 color="primary"
+                fullWidth
                 className="section-title"
                 data-tour="event-attendees-toggle"
+                aria-expanded={showAttendees}
+                aria-controls={showAttendees ? 'event-guests-list' : undefined}
                 onClick={() => setShowAttendees((current) => !current)}
-                sx={{ minWidth: 0, px: 0.5, py: 0.25, color: 'text.primary' }}
+                endIcon={showAttendees ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                sx={{ justifyContent: 'space-between', px: 0.5, py: 0.5, color: 'text.primary', textAlign: 'left' }}
               >
-                {showAttendees ? 'Hide guests' : `Manage guests (${selectedProject.attendees.length})`}
+                Manage guests ({selectedProject.attendees.length})
               </Button>
             </div>
 
             {showAttendees && (
-              <TableContainer>
+              <TableContainer id="event-guests-list">
                 <Table size="small" className="items-table event-guests-table">
                   <TableHead>
                     <TableRow>
@@ -1915,16 +1924,27 @@ function App() {
               .filter((meal) => isPastMeal(meal))
               .sort((x, y) => `${y.date} ${y.startTime}`.localeCompare(`${x.date} ${x.startTime}`))
             return (
-              <Paper ref={pastMealsRef} className="panel compact-section event-section-target" elevation={0} sx={{ p: 2 }}>
-                <Typography variant="subtitle1" className="section-title" sx={{ mb: 0.5 }}>
+              <Paper ref={pastMealsRef} className="panel open-section compact-section event-section-target" elevation={0} sx={{ p: 2 }}>
+                <Button
+                  type="button"
+                  variant="text"
+                  color="primary"
+                  fullWidth
+                  className="section-title"
+                  aria-expanded={showPastMeals}
+                  aria-controls={showPastMeals ? 'past-meals-list' : undefined}
+                  onClick={() => setShowPastMeals((current) => !current)}
+                  endIcon={showPastMeals ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                  sx={{ justifyContent: 'space-between', px: 0.5, py: 0.5, color: 'text.primary', textAlign: 'left' }}
+                >
                   Past meals ({pastMealList.length})
-                </Typography>
-                {pastMealList.length === 0 ? (
-                  <Typography variant="body2" className="muted" sx={{ py: 1 }}>
+                </Button>
+                {showPastMeals && (pastMealList.length === 0 ? (
+                  <Typography id="past-meals-list" variant="body2" className="muted" sx={{ py: 1 }}>
                     No past meals yet. Meals move here automatically once their date and time have passed.
                   </Typography>
                 ) : (
-                  <TableContainer>
+                  <TableContainer id="past-meals-list">
                     <Table size="small" className="items-table past-meals-table">
                       <TableHead>
                         <TableRow>
@@ -1963,7 +1983,7 @@ function App() {
                       </TableBody>
                     </Table>
                   </TableContainer>
-                )}
+                ))}
               </Paper>
             )
           })()}
@@ -2024,7 +2044,7 @@ function App() {
             </div>
           </Paper>
 
-          <Paper className="panel" elevation={0} sx={{ p: 2 }}>
+          <Paper className="panel open-section" elevation={0} sx={{ p: 2 }}>
             <Typography variant="subtitle1" className="section-title" sx={{ mb: 0.5 }}>
               Menu ({selectedMeal.items.length})
             </Typography>
@@ -2188,7 +2208,7 @@ function App() {
             </TableContainer>
           </Paper>
 
-          <Paper className="panel" elevation={0} sx={{ p: 2 }}>
+          <Paper className="panel open-section" elevation={0} sx={{ p: 2 }}>
             <Button
               type="button"
               variant="text"
