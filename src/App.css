@@ -175,6 +175,14 @@
   margin-bottom: 6px;
 }
 
+.MuiTypography-root.section-title,
+.MuiButton-root.section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.75;
+  letter-spacing: 0.00938em;
+}
+
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));

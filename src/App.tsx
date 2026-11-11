@@ -32,7 +32,7 @@ import CloseIcon from '@mui/icons-material/Close'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
-import HelpOutlineIcon from '@mui/icons-material/HelpOutlineOutlined'
+import QuestionMarkIcon from '@mui/icons-material/QuestionMark'
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import ShareOutlinedIcon from '@mui/icons-material/ShareOutlined'
@@ -466,7 +466,7 @@ function App() {
       (view === 'meal' && Boolean(selectedMeal)))
   const { startTour } = useTour(tourView, tourReady)
   const tourButton = (
-    <Button type="button" size="small" variant="text" className="icon-on-phone" aria-label="Take the tour" startIcon={<HelpOutlineIcon />} onClick={startTour}>
+    <Button type="button" variant="outlined" color="primary" className="secondary-button icon-on-phone" aria-label="Take the tour" startIcon={<QuestionMarkIcon fontSize="small" />} onClick={startTour}>
       <span className="btn-label">Take the tour</span>
     </Button>
   )
@@ -1412,7 +1412,7 @@ function App() {
                 }}
               >
                 <div className="create-event-header">
-                  <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                  <Typography variant="subtitle1" className="section-title">
                     New event
                   </Typography>
                   <IconButton size="small" aria-label="Close create event form" onClick={() => setShowCreateEventForm(false)}>
@@ -1544,7 +1544,7 @@ function App() {
           </Paper>
 
           <Paper ref={upcomingMealsRef} className="panel event-section-target" elevation={0} sx={{ p: 2 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
+            <Typography variant="subtitle1" className="section-title" sx={{ mb: 0.5 }}>
               Upcoming meals ({selectedProject.meals.filter((meal) => !isPastMeal(meal)).length})
             </Typography>
             <div className="meal-grid">
@@ -1602,7 +1602,7 @@ function App() {
                 }}
               >
                 <div className="create-event-header">
-                  <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                  <Typography variant="subtitle1" className="section-title">
                     New meal
                   </Typography>
                   <IconButton size="small" aria-label="Close meal form" onClick={() => setShowMealForm(false)}>
@@ -1757,9 +1757,10 @@ function App() {
                 type="button"
                 variant="text"
                 color="primary"
+                className="section-title"
                 data-tour="event-attendees-toggle"
                 onClick={() => setShowAttendees((current) => !current)}
-                sx={{ minWidth: 0, px: 0.5, py: 0.25, fontWeight: 700, color: 'text.primary' }}
+                sx={{ minWidth: 0, px: 0.5, py: 0.25, color: 'text.primary' }}
               >
                 {showAttendees ? 'Hide guests' : `Manage guests (${selectedProject.attendees.length})`}
               </Button>
@@ -1915,7 +1916,7 @@ function App() {
               .sort((x, y) => `${y.date} ${y.startTime}`.localeCompare(`${x.date} ${x.startTime}`))
             return (
               <Paper ref={pastMealsRef} className="panel compact-section event-section-target" elevation={0} sx={{ p: 2 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
+                <Typography variant="subtitle1" className="section-title" sx={{ mb: 0.5 }}>
                   Past meals ({pastMealList.length})
                 </Typography>
                 {pastMealList.length === 0 ? (
@@ -2024,7 +2025,7 @@ function App() {
           </Paper>
 
           <Paper className="panel" elevation={0} sx={{ p: 2 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
+            <Typography variant="subtitle1" className="section-title" sx={{ mb: 0.5 }}>
               Menu ({selectedMeal.items.length})
             </Typography>
 
@@ -2192,10 +2193,11 @@ function App() {
               type="button"
               variant="text"
               fullWidth
+              className="section-title"
               data-tour="meal-guests-toggle"
               onClick={() => setShowMealGuests((current) => !current)}
               endIcon={showMealGuests ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-              sx={{ justifyContent: 'space-between', px: 0.5, py: 0.5, fontWeight: 700, color: 'text.primary', textAlign: 'left' }}
+              sx={{ justifyContent: 'space-between', px: 0.5, py: 0.5, color: 'text.primary', textAlign: 'left' }}
             >
               Attending guests ({mealAttendees.length} of {selectedProject.attendees.length} Event Guests)
             </Button>
