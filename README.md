@@ -11,6 +11,7 @@ A device-agnostic group meal planning app for projects/events with reusable atte
   - public with password
   - private with password
 - Reusable attendee directory with dietary restrictions
+- Guest first and last names must be unique within an event, ignoring capitalization and extra whitespace. Add an existing event guest to a meal using the guest selector.
 - Meal date, time, category, attendee count, and dietary summary
 - Meal items with name, description, category, and person responsible
 - Admin-only delete actions for projects and meals

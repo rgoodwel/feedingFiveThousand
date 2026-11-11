@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { useTour } from './tour/useTour'
 import type { TourView } from './tour/tours'
 import Alert from '@mui/material/Alert'
@@ -73,6 +73,27 @@ const parseDietary = (text: string) =>
 
 const isDraftComplete = (draft: AttendeeDraft) =>
   Boolean(draft.firstName.trim() && draft.lastName.trim() && draft.ageGroup && parseDietary(draft.dietaryText).length)
+
+const hasDuplicateGuestName = (
+  attendees: Attendee[],
+  guest: Pick<Attendee, 'firstName' | 'lastName'>,
+  excludeId?: string,
+) => {
+  const normalize = (name: string) => name.trim().replace(/\s+/g, ' ').toLowerCase()
+  const firstName = normalize(guest.firstName)
+  const lastName = normalize(guest.lastName)
+  return Boolean(firstName && lastName) && attendees.some(
+    (attendee) => attendee.id !== excludeId &&
+      normalize(attendee.firstName) === firstName && normalize(attendee.lastName) === lastName,
+  )
+}
+
+const duplicateGuestMessage = 'A guest with this first and last name is already in this event.'
+
+const compareGuests = (a: Attendee, b: Attendee) =>
+  a.lastName.trim().localeCompare(b.lastName.trim(), undefined, { sensitivity: 'base' }) ||
+  a.firstName.trim().localeCompare(b.firstName.trim(), undefined, { sensitivity: 'base' }) ||
+  a.id.localeCompare(b.id)
 
 const derivedDietarySummary = (meal: Meal, guests: Attendee[]) => {
   if (meal.dietarySummary) return meal.dietarySummary
@@ -299,11 +320,21 @@ function App() {
   const [showMealItemForm, setShowMealItemForm] = useState(false)
   const [showAttendees, setShowAttendees] = useState(() => !isPhone())
   const [showMealGuests, setShowMealGuests] = useState(() => !isPhone())
+  const upcomingMealsRef = useRef<HTMLDivElement>(null)
+  const pastMealsRef = useRef<HTMLDivElement>(null)
+  const eventGuestsRef = useRef<HTMLDivElement>(null)
   const [guestPickerOpen, setGuestPickerOpen] = useState(false)
   const [pendingGuestIds, setPendingGuestIds] = useState<string[]>([])
   const [mealGuestDraft, setMealGuestDraft] = useState<AttendeeDraft | null>(null)
 
   const [hydrated, setHydrated] = useState(false)
+
+  const scrollToEventSection = (section: HTMLDivElement | null) => {
+    section?.scrollIntoView({
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+      block: 'start',
+    })
+  }
 
   // wait for the initial load so sample data never overwrites saved data
   useEffect(() => {
@@ -400,12 +431,17 @@ function App() {
     [selectedProject, selectedMealId],
   )
 
+  const sortedEventAttendees = useMemo(
+    () => [...(selectedProject?.attendees ?? [])].sort(compareGuests),
+    [selectedProject],
+  )
+
   const mealAttendees = useMemo(
     () =>
       selectedProject && selectedMeal
-        ? selectedProject.attendees.filter((a) => selectedMeal.assignedAttendeeIds.includes(a.id))
+        ? sortedEventAttendees.filter((a) => selectedMeal.assignedAttendeeIds.includes(a.id))
         : [],
-    [selectedProject, selectedMeal],
+    [selectedProject, selectedMeal, sortedEventAttendees],
   )
   const ageGroupCounts = useMemo(() => {
     const counts: Record<AgeGroup, number> = { adult: 0, kid: 0 }
@@ -416,9 +452,9 @@ function App() {
   const availableGuests = useMemo(
     () =>
       selectedProject && selectedMeal
-        ? selectedProject.attendees.filter((a) => !selectedMeal.assignedAttendeeIds.includes(a.id))
+        ? sortedEventAttendees.filter((a) => !selectedMeal.assignedAttendeeIds.includes(a.id))
         : [],
-    [selectedProject, selectedMeal],
+    [selectedProject, selectedMeal, sortedEventAttendees],
   )
 
   const currentProjectUnlocked = selectedProject ? isProjectUnlocked(selectedProject, projectAccess) : true
@@ -481,7 +517,8 @@ function App() {
   }
 
   const saveDraftAttendee = () => {
-    if (!selectedProject || !draftAttendee || !isDraftComplete(draftAttendee)) return
+    if (!selectedProject || !draftAttendee || !isDraftComplete(draftAttendee) ||
+      hasDuplicateGuestName(selectedProject.attendees, draftAttendee)) return
 
     const nextAttendee: Attendee = {
       id: crypto.randomUUID(),
@@ -503,7 +540,8 @@ function App() {
   }
 
   const saveMealGuestDraft = () => {
-    if (!selectedProject || !selectedMeal || !mealGuestDraft || !isDraftComplete(mealGuestDraft)) return
+    if (!selectedProject || !selectedMeal || !mealGuestDraft || !isDraftComplete(mealGuestDraft) ||
+      hasDuplicateGuestName(selectedProject.attendees, mealGuestDraft)) return
 
     const nextAttendee: Attendee = {
       id: crypto.randomUUID(),
@@ -563,7 +601,8 @@ function App() {
   }
 
   const saveGuestEdit = () => {
-    if (!guestEdit || !isDraftComplete(guestEdit)) return
+    if (!selectedProject || !guestEdit || !isDraftComplete(guestEdit) ||
+      hasDuplicateGuestName(selectedProject.attendees, guestEdit, guestEdit.id)) return
     updateAttendee(guestEdit.id, {
       firstName: guestEdit.firstName.trim(),
       lastName: guestEdit.lastName.trim(),
@@ -1207,6 +1246,8 @@ function App() {
                 label="Last name"
                 size="small"
                 value={guestEdit.lastName}
+                error={Boolean(selectedProject && hasDuplicateGuestName(selectedProject.attendees, guestEdit, guestEdit.id))}
+                helperText={selectedProject && hasDuplicateGuestName(selectedProject.attendees, guestEdit, guestEdit.id) ? duplicateGuestMessage : undefined}
                 onChange={(event) => setGuestEdit((current) => current && { ...current, lastName: event.target.value })}
               />
               <TextField
@@ -1247,7 +1288,7 @@ function App() {
               <Button type="button" variant="outlined" color="primary" onClick={() => setGuestEdit(null)}>
                 Cancel
               </Button>
-              <Button type="submit" variant="contained" color="primary" disabled={!isDraftComplete(guestEdit)}>
+              <Button type="submit" variant="contained" color="primary" disabled={!isDraftComplete(guestEdit) || Boolean(selectedProject && hasDuplicateGuestName(selectedProject.attendees, guestEdit, guestEdit.id))}>
                 Save
               </Button>
             </DialogActions>
@@ -1306,7 +1347,7 @@ function App() {
 
       {view === 'dashboard' && (
         <main className="dashboard-grid">
-          <Paper className="panel" elevation={0} sx={{ p: 2, borderRadius: 3 }}>
+          <Paper className="panel" elevation={0} sx={{ p: 2 }}>
             <div className="panel-header">
               <div />
             </div>
@@ -1348,7 +1389,7 @@ function App() {
             </div>
           </Paper>
 
-          <Paper className="panel form-panel create-event-panel" elevation={0} sx={{ p: 2, borderRadius: 3 }}>
+          <Paper className="panel form-panel create-event-panel" elevation={0} sx={{ p: 2 }}>
             {!showCreateEventForm ? (
               <div className="panel-header" style={{ justifyContent: 'flex-start' }}>
                 <Button
@@ -1445,7 +1486,7 @@ function App() {
 
       {view === 'project' && selectedProject && currentProjectUnlocked && (
         <main className="detail-stack">
-          <Paper className="panel" elevation={0} sx={{ p: 2, borderRadius: 3 }}>
+          <Paper className="panel" elevation={0} sx={{ p: 2 }}>
             <div data-tour="event-header">
             <div className="project-header-row">
               <div>
@@ -1454,14 +1495,21 @@ function App() {
                 </Typography>
               </div>
             </div>
-            <div className="meal-header-metadata">
-              <span>{selectedProject.meals.filter((m) => !isPastMeal(m)).length} upcoming meals</span>
-              <span>{selectedProject.meals.filter((m) => isPastMeal(m)).length} past meals</span>
-              <span>
+            <div className="meal-header-metadata event-header-metrics">
+              <button type="button" onClick={() => scrollToEventSection(upcomingMealsRef.current)}>
+                {selectedProject.meals.filter((m) => !isPastMeal(m)).length} upcoming meals
+              </button>
+              <button type="button" onClick={() => scrollToEventSection(pastMealsRef.current)}>
+                {selectedProject.meals.filter((m) => isPastMeal(m)).length} past meals
+              </button>
+              <button type="button" onClick={() => {
+                setShowAttendees(true)
+                scrollToEventSection(eventGuestsRef.current)
+              }}>
                 {selectedProject.attendees.length} {selectedProject.attendees.length === 1 ? 'guest' : 'guests'} (
                 {selectedProject.attendees.filter((a) => a.ageGroup === 'adult').length} adults,{' '}
                 {selectedProject.attendees.filter((a) => a.ageGroup === 'kid').length} kids)
-              </span>
+              </button>
             </div>
             </div>
             <div className="project-actions event-actions-bar">
@@ -1495,7 +1543,10 @@ function App() {
             </div>
           </Paper>
 
-          <Paper className="panel" elevation={0} sx={{ p: 2, borderRadius: 3 }}>
+          <Paper ref={upcomingMealsRef} className="panel event-section-target" elevation={0} sx={{ p: 2 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
+              Upcoming meals ({selectedProject.meals.filter((meal) => !isPastMeal(meal)).length})
+            </Typography>
             <div className="meal-grid">
               {selectedProject.meals.filter((meal) => !isPastMeal(meal)).length === 0 && (
                 <p className="muted">No upcoming meals in planning.</p>
@@ -1700,7 +1751,7 @@ function App() {
             )}
           </Paper>
 
-          <Paper className="panel compact-section" data-tour="event-guests" elevation={0} sx={{ p: 2, borderRadius: 3 }}>
+          <Paper ref={eventGuestsRef} className="panel compact-section event-section-target" data-tour="event-guests" elevation={0} sx={{ p: 2 }}>
             <div className="section-header compact-header">
               <Button
                 type="button"
@@ -1754,6 +1805,8 @@ function App() {
                             required
                             value={draftAttendee.lastName}
                             placeholder="Last name"
+                            error={hasDuplicateGuestName(selectedProject.attendees, draftAttendee)}
+                            helperText={hasDuplicateGuestName(selectedProject.attendees, draftAttendee) ? duplicateGuestMessage : undefined}
                             onChange={(event) => setDraftAttendee((current) => current && { ...current, lastName: event.target.value })}
                           />
                         </TableCell>
@@ -1793,7 +1846,7 @@ function App() {
                             size="small"
                             color="primary"
                             aria-label="Save guest"
-                            disabled={!isDraftComplete(draftAttendee)}
+                            disabled={!isDraftComplete(draftAttendee) || hasDuplicateGuestName(selectedProject.attendees, draftAttendee)}
                             onClick={saveDraftAttendee}
                           >
                             <CheckIcon fontSize="small" />
@@ -1813,7 +1866,7 @@ function App() {
                       </TableRow>
                     )}
 
-                    {selectedProject.attendees.map((attendee) => {
+                    {sortedEventAttendees.map((attendee) => {
                       const fullName = `${attendee.firstName} ${attendee.lastName}`.trim()
                       return (
                         <TableRow key={attendee.id} hover className={expandedRows.has(attendee.id) ? 'row-expanded' : undefined}>
@@ -1861,7 +1914,7 @@ function App() {
               .filter((meal) => isPastMeal(meal))
               .sort((x, y) => `${y.date} ${y.startTime}`.localeCompare(`${x.date} ${x.startTime}`))
             return (
-              <Paper className="panel compact-section" elevation={0} sx={{ p: 2, borderRadius: 3 }}>
+              <Paper ref={pastMealsRef} className="panel compact-section event-section-target" elevation={0} sx={{ p: 2 }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
                   Past meals ({pastMealList.length})
                 </Typography>
@@ -1919,7 +1972,7 @@ function App() {
 
       {view === 'meal' && selectedProject && selectedMeal && (
         <main className="detail-stack">
-          <Paper className="panel compact-meal-header-panel" elevation={0} sx={{ p: 2, borderRadius: 3 }}>
+          <Paper className="panel compact-meal-header-panel" elevation={0} sx={{ p: 2 }}>
             <div className="meal-header-row" data-tour="meal-header">
               <div className="meal-header-copy">
                 <div className="meal-header-title-row">
@@ -1971,7 +2024,7 @@ function App() {
             </div>
           </Paper>
 
-          <Paper className="panel" elevation={0} sx={{ p: 2, borderRadius: 3 }}>
+          <Paper className="panel" elevation={0} sx={{ p: 2 }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
               Menu ({selectedMeal.items.length})
             </Typography>
@@ -2136,7 +2189,7 @@ function App() {
             </TableContainer>
           </Paper>
 
-          <Paper className="panel" elevation={0} sx={{ p: 2, borderRadius: 3 }}>
+          <Paper className="panel" elevation={0} sx={{ p: 2 }}>
             <Button
               type="button"
               variant="text"
@@ -2186,6 +2239,8 @@ function App() {
                             required
                             value={mealGuestDraft.lastName}
                             placeholder="Last name"
+                            error={hasDuplicateGuestName(selectedProject.attendees, mealGuestDraft)}
+                            helperText={hasDuplicateGuestName(selectedProject.attendees, mealGuestDraft) ? `${duplicateGuestMessage} If they are not attending, select them from the guest list.` : undefined}
                             onChange={(event) => setMealGuestDraft((c) => c && { ...c, lastName: event.target.value })}
                           />
                         </Box>
@@ -2224,7 +2279,7 @@ function App() {
                           size="small"
                           color="primary"
                           aria-label="Save new guest"
-                          disabled={!isDraftComplete(mealGuestDraft)}
+                          disabled={!isDraftComplete(mealGuestDraft) || hasDuplicateGuestName(selectedProject.attendees, mealGuestDraft)}
                           onClick={saveMealGuestDraft}
                         >
                           <CheckIcon fontSize="small" />
