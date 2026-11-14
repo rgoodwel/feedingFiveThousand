@@ -15,6 +15,7 @@ A device-agnostic group meal planning app for projects/events with reusable atte
 - Guest first and last names must be unique within an event, ignoring capitalization and extra whitespace. Add an existing event guest to a meal using the guest selector.
 - Meal date, time, category, attendee count, and dietary summary
 - When creating a meal, add guests from an existing meal without replacing the current selection
+- Supabase data refreshes when the app returns to the foreground; open edits are kept until finished or canceled
 - Meal items with name, description, category, and person responsible
 - Admin-only delete actions for projects and meals
 - Two-step confirmation before deleting meal items

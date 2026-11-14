@@ -52,7 +52,7 @@ import {
   type AgeGroup,
   type FoodCategory,
 } from './data/sampleData'
-import { loadProjects, persistProjects, usesSupabase } from './lib/projectService'
+import { acceptLoadedProjects, loadProjects, persistProjects, usesSupabase, waitForPendingSaves } from './lib/projectService'
 
 const isPhone = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 700px)').matches
 
@@ -350,6 +350,14 @@ function App() {
   const [hydrated, setHydrated] = useState(false)
   const [loadError, setLoadError] = useState(false)
   const [loadAttempt, setLoadAttempt] = useState(0)
+  const [refreshPending, setRefreshPending] = useState(false)
+  const [refreshGeneration, setRefreshGeneration] = useState(0)
+  const [refreshing, setRefreshing] = useState(false)
+  const [refreshError, setRefreshError] = useState(false)
+  const [refreshNotice, setRefreshNotice] = useState('')
+  const [saveError, setSaveError] = useState(false)
+  const loadedProjects = useRef<Project[] | null>(null)
+  const refreshRequests = useRef(0)
 
   const scrollToEventSection = (section: HTMLDivElement | null) => {
     section?.scrollIntoView({
@@ -360,7 +368,14 @@ function App() {
 
   // wait for the initial load so sample data never overwrites saved data
   useEffect(() => {
-    if (hydrated) void persistProjects(projects)
+    if (!hydrated || projects === loadedProjects.current) return
+    void persistProjects(projects).then(
+      () => setSaveError(false),
+      (error) => {
+        console.error('Unable to save changes:', error)
+        setSaveError(true)
+      },
+    )
   }, [projects, hydrated])
 
   useEffect(() => {
@@ -409,6 +424,8 @@ function App() {
         return
       }
       if (!mounted) return
+      acceptLoadedProjects(savedProjects)
+      loadedProjects.current = savedProjects
       setProjects(savedProjects)
       setHydrated(true)
       const params = new URLSearchParams(window.location.search)
@@ -429,6 +446,69 @@ function App() {
       mounted = false
     }
   }, [loadAttempt])
+
+  const editing = showCreateEventForm || showMealForm || showMealItemForm ||
+    Boolean(draftAttendee || mealGuestDraft || editForm || itemEdit || guestEdit ||
+      deleteTarget || guestRemoval || guestPickerOpen || pendingGuestIds.length)
+
+  useEffect(() => {
+    if (!usesSupabase || !hydrated) return
+    const requestRefresh = () => {
+      if (document.visibilityState === 'visible') {
+        refreshRequests.current += 1
+        setRefreshGeneration((generation) => generation + 1)
+        setRefreshPending(true)
+      }
+    }
+    document.addEventListener('visibilitychange', requestRefresh)
+    window.addEventListener('pageshow', requestRefresh)
+    return () => {
+      document.removeEventListener('visibilitychange', requestRefresh)
+      window.removeEventListener('pageshow', requestRefresh)
+    }
+  }, [hydrated])
+
+  useEffect(() => {
+    if (!refreshPending || editing || refreshError || saveError || document.visibilityState !== 'visible') return
+    let active = true
+    const refresh = async () => {
+      setRefreshing(true)
+      try {
+        await waitForPendingSaves()
+        let freshProjects: Project[]
+        let request: number
+        do {
+          request = refreshRequests.current
+          freshProjects = await loadProjects()
+        } while (active && request !== refreshRequests.current)
+        if (!active) return
+        acceptLoadedProjects(freshProjects)
+        loadedProjects.current = freshProjects
+        setProjects(freshProjects)
+        const project = freshProjects.find((item) => item.id === selectedProjectId)
+        if (view !== 'dashboard' && !project) {
+          setRefreshNotice('This event is no longer available.')
+          setSelectedMealId(null)
+          setView('dashboard')
+        } else if (view === 'meal' && !project?.meals.some((meal) => meal.id === selectedMealId)) {
+          setRefreshNotice('This meal is no longer available.')
+          setSelectedMealId(null)
+          setView('project')
+        }
+        setRefreshPending(false)
+      } catch (error) {
+        console.error('Unable to refresh meal planner:', error)
+        if (active) setRefreshError(true)
+      } finally {
+        if (active) setRefreshing(false)
+      }
+    }
+    void refresh()
+    return () => {
+      active = false
+      setRefreshing(false)
+    }
+  }, [refreshPending, refreshGeneration, editing, refreshError, saveError, selectedProjectId, selectedMealId, view])
 
 
   useEffect(() => {
@@ -480,7 +560,7 @@ function App() {
 
   const tourView: TourView = view === 'meal' ? 'meal' : 'project'
   const tourReady =
-    hydrated &&
+    hydrated && !refreshing &&
     !deleteTarget &&
     ((view === 'project' && Boolean(selectedProject) && currentProjectUnlocked) ||
       (view === 'meal' && Boolean(selectedMeal)))
@@ -976,7 +1056,7 @@ function App() {
     setProjectPasswordInput('')
   }
 
-  if (!hydrated) {
+  if (!hydrated || refreshing) {
     if (loadError) {
       return (
         <main className="app-shell">
@@ -1016,6 +1096,35 @@ function App() {
 
   return (
     <div className="app-shell">
+      {refreshNotice && (
+        <Alert severity="info" sx={{ mb: 2 }} onClose={() => setRefreshNotice('')}>
+          {refreshNotice}
+        </Alert>
+      )}
+      {saveError && (
+        <Alert severity="error" sx={{ mb: 2 }} action={
+          <Button color="inherit" size="small" onClick={() => {
+            void persistProjects(projects).then(
+              () => setSaveError(false),
+              (error) => console.error('Unable to save changes:', error),
+            )
+          }}>Retry save</Button>
+        }>
+          Changes could not be saved. Retry before refreshing.
+        </Alert>
+      )}
+      {refreshError && (
+        <Alert severity="error" sx={{ mb: 2 }} action={
+          <Button color="inherit" size="small" onClick={() => setRefreshError(false)}>Retry</Button>
+        }>
+          Could not refresh data. The information shown may be out of date.
+        </Alert>
+      )}
+      {refreshPending && editing && !refreshError && !saveError && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Data will refresh after you finish or cancel your current edit. Saving before then may overwrite changes made on another device.
+        </Alert>
+      )}
       {!usesSupabase && (
         <Alert severity="warning" sx={{ mb: 2 }}>
           Supabase isn't configured in this build, so data is only stored in this browser (local cache) and sample data is shown.

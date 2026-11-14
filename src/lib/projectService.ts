@@ -161,7 +161,6 @@ export async function loadProjects(): Promise<Project[]> {
       }),
     )
 
-    syncedIds = collectIds(projects)
     return projects
   }
 
@@ -185,16 +184,24 @@ const collectIds = (projects: Project[]): SyncedIds => ({
   items: new Set(projects.flatMap((project) => project.meals.flatMap((meal) => meal.items.map((item) => item.id)))),
 })
 
+export function acceptLoadedProjects(projects: Project[]) {
+  if (supabase) syncedIds = collectIds(projects)
+}
+
 const removedIds = (previous: Set<string>, current: Set<string>) => [...previous].filter((id) => !current.has(id))
 
 let persistQueue: Promise<void> = Promise.resolve()
 
 const report = (table: string, result: { error: { message: string } | null }) => {
-  if (result.error) console.error(`Supabase save failed for ${table}:`, result.error.message)
+  if (result.error) throw new Error(`Supabase save failed for ${table}: ${result.error.message}`)
 }
 
 export function persistProjects(projects: Project[]) {
-  persistQueue = persistQueue.then(() => syncProjects(projects))
+  persistQueue = persistQueue.catch(() => {}).then(() => syncProjects(projects))
+  return persistQueue
+}
+
+export function waitForPendingSaves() {
   return persistQueue
 }
 
@@ -208,91 +215,77 @@ async function syncProjects(projects: Project[]) {
     return
   }
 
-  try {
-    const currentIds = collectIds(projects)
-    let deleteFailed = false
+  const currentIds = collectIds(projects)
 
-    // children first so removed guests/items are cleaned up even when their parent stays
-    for (const [table, key] of [
-      ['meal_items', 'items'],
-      ['meals', 'meals'],
-      ['attendees', 'attendees'],
-      ['projects', 'projects'],
-    ] as const) {
-      const ids = removedIds(syncedIds[key], currentIds[key])
-      if (!ids.length) continue
-      const result = await supabase.from(table).delete().in('id', ids)
-      if (result.error) deleteFailed = true
-      report(table, result)
-    }
-
-    for (const project of projects) {
-      const row = {
-        id: project.id,
-        name: project.name,
-        description: project.description,
-        visibility: project.visibility,
-        password_hash: project.password ? await hashPassword(project.password) : null,
-        updated_at: new Date().toISOString(),
-      }
-
-      report('projects', await supabase.from('projects').upsert(row))
-
-      const attendeeRows = project.attendees.map((attendee) => ({
-        id: attendee.id,
-        project_id: project.id,
-        name: `${attendee.firstName} ${attendee.lastName}`.trim(),
-        first_name: attendee.firstName,
-        last_name: attendee.lastName,
-        age_group: attendee.ageGroup,
-        dietary_restrictions: attendee.dietaryRestrictions,
-      }))
-      report('attendees', await supabase.from('attendees').upsert(attendeeRows))
-
-      for (const meal of project.meals) {
-        const mealRow = {
-          id: meal.id,
-          project_id: project.id,
-          title: meal.title,
-          date: meal.date,
-          start_time: meal.startTime,
-          category: meal.category,
-          attendee_count: meal.attendeeCount,
-          dietary_summary: meal.dietarySummary,
-          assigned_attendee_ids: meal.assignedAttendeeIds,
-        }
-        let mealResult = await supabase.from('meals').upsert({ ...mealRow, location: meal.location })
-        if (mealResult.error && /location/i.test(mealResult.error.message)) {
-          // The location column hasn't been added to the remote table yet.
-          mealResult = await supabase.from('meals').upsert(mealRow)
-        }
-        report('meals', mealResult)
-
-        for (const item of meal.items) {
-          report('meal_items', await supabase.from('meal_items').upsert({
-            id: item.id,
-            meal_id: meal.id,
-            name: item.name,
-            description: item.description,
-            category: item.category,
-            person_responsible: item.personResponsible,
-          }))
-        }
-      }
-    }
-
-    // keep old ids when a delete failed so it is retried on the next save
-    syncedIds = deleteFailed
-      ? {
-          projects: new Set([...syncedIds.projects, ...currentIds.projects]),
-          attendees: new Set([...syncedIds.attendees, ...currentIds.attendees]),
-          meals: new Set([...syncedIds.meals, ...currentIds.meals]),
-          items: new Set([...syncedIds.items, ...currentIds.items]),
-        }
-      : currentIds
-  } catch (error) {
-    console.warn('Supabase persist failed, local storage remains the source of truth.', error)
+  // children first so removed guests/items are cleaned up even when their parent stays
+  for (const [table, key] of [
+    ['meal_items', 'items'],
+    ['meals', 'meals'],
+    ['attendees', 'attendees'],
+    ['projects', 'projects'],
+  ] as const) {
+    const ids = removedIds(syncedIds[key], currentIds[key])
+    if (!ids.length) continue
+    const result = await supabase.from(table).delete().in('id', ids)
+    report(table, result)
   }
+
+  for (const project of projects) {
+    const row = {
+      id: project.id,
+      name: project.name,
+      description: project.description,
+      visibility: project.visibility,
+      password_hash: project.password ? await hashPassword(project.password) : null,
+      updated_at: new Date().toISOString(),
+    }
+
+    report('projects', await supabase.from('projects').upsert(row))
+
+    const attendeeRows = project.attendees.map((attendee) => ({
+      id: attendee.id,
+      project_id: project.id,
+      name: `${attendee.firstName} ${attendee.lastName}`.trim(),
+      first_name: attendee.firstName,
+      last_name: attendee.lastName,
+      age_group: attendee.ageGroup,
+      dietary_restrictions: attendee.dietaryRestrictions,
+    }))
+    report('attendees', await supabase.from('attendees').upsert(attendeeRows))
+
+    for (const meal of project.meals) {
+      const mealRow = {
+        id: meal.id,
+        project_id: project.id,
+        title: meal.title,
+        date: meal.date,
+        start_time: meal.startTime,
+        category: meal.category,
+        attendee_count: meal.attendeeCount,
+        dietary_summary: meal.dietarySummary,
+        assigned_attendee_ids: meal.assignedAttendeeIds,
+      }
+      let mealResult = await supabase.from('meals').upsert({ ...mealRow, location: meal.location })
+      if (mealResult.error && /location/i.test(mealResult.error.message)) {
+        // The location column hasn't been added to the remote table yet.
+        mealResult = await supabase.from('meals').upsert(mealRow)
+      }
+      report('meals', mealResult)
+
+      for (const item of meal.items) {
+        report('meal_items', await supabase.from('meal_items').upsert({
+          id: item.id,
+          meal_id: meal.id,
+          name: item.name,
+          description: item.description,
+          category: item.category,
+          person_responsible: item.personResponsible,
+        }))
+      }
+    }
+  }
+
+  syncedIds = currentIds
 }
 
 export async function hashPassword(value: string) {
