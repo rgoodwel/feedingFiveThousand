@@ -1720,14 +1720,14 @@ function App() {
                   size="small"
                   disableCloseOnSelect
                   options={
-                    selectedProject.attendees.length > 0
+                    sortedEventAttendees.length > 0
                       ? [
                           { id: SELECT_ALL_OPTION, firstName: 'Select all', lastName: 'guests', ageGroup: 'adult', dietaryRestrictions: [] } as Attendee,
-                          ...selectedProject.attendees,
+                          ...sortedEventAttendees,
                         ]
                       : []
                   }
-                  value={selectedProject.attendees.filter((a) => mealForm.guestIds.includes(a.id))}
+                  value={sortedEventAttendees.filter((a) => mealForm.guestIds.includes(a.id))}
                   getOptionLabel={(a) => `${a.firstName} ${a.lastName}`}
                   isOptionEqualToValue={(a, b) => a.id === b.id}
                   renderOption={(optionProps, option, { selected }) => {
