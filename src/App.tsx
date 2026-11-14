@@ -101,6 +101,19 @@ const countAgeGroups = (attendees: Attendee[]) => {
   return counts
 }
 
+const mealsNearestToday = (meals: Meal[]) => {
+  const now = new Date()
+  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
+  const distance = (meal: Meal) => {
+    const date = Date.parse(`${meal.date}T00:00:00Z`)
+    return Number.isNaN(date) ? Infinity : Math.abs(date - today)
+  }
+  return [...meals].sort((a, b) =>
+    distance(a) - distance(b) || b.date.localeCompare(a.date) ||
+    a.startTime.localeCompare(b.startTime) || a.title.localeCompare(b.title),
+  )
+}
+
 const derivedDietarySummary = (meal: Meal, guests: Attendee[]) => {
   if (meal.dietarySummary) return meal.dietarySummary
   const counts = new Map<string, number>()
@@ -1721,6 +1734,46 @@ function App() {
                       </MenuItem>
                     ))}
                   </TextField>
+                {selectedProject.meals.length > 0 && (
+                  <TextField
+                    className="create-event-wide"
+                    size="small"
+                    select
+                    label="Copy guests from another meal"
+                    value=""
+                    onChange={(event) => {
+                      const sourceMeal = selectedProject.meals.find((meal) => meal.id === event.target.value)
+                      if (!sourceMeal) return
+                      const eventGuestIds = new Set(selectedProject.attendees.map((attendee) => attendee.id))
+                      setMealForm((current) => ({
+                        ...current,
+                        guestIds: [...new Set([
+                          ...current.guestIds,
+                          ...sourceMeal.assignedAttendeeIds.filter((id) => eventGuestIds.has(id)),
+                        ])],
+                      }))
+                    }}
+                    slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}
+                  >
+                    <MenuItem value="" disabled>Copy guest list....</MenuItem>
+                    {mealsNearestToday(selectedProject.meals).map((meal) => {
+                      const guests = selectedProject.attendees.filter((attendee) => meal.assignedAttendeeIds.includes(attendee.id))
+                      const counts = countAgeGroups(guests)
+                      return (
+                        <MenuItem key={meal.id} value={meal.id} sx={{ whiteSpace: 'normal', alignItems: 'flex-start' }}>
+                          <Box sx={{ minWidth: 0, overflowWrap: 'anywhere' }}>
+                            <Typography component="div" variant="body2" sx={{ fontWeight: 700 }}>
+                              {meal.title}
+                            </Typography>
+                            <Typography component="div" variant="body2" color="text.secondary">
+                              {formatDate(meal.date)} · {guests.length} {guests.length === 1 ? 'guest' : 'guests'} ({counts.adult} adults, {counts.kid} kids)
+                            </Typography>
+                          </Box>
+                        </MenuItem>
+                      )
+                    })}
+                  </TextField>
+                )}
                 <Autocomplete
                   multiple
                   size="small"
@@ -1768,7 +1821,7 @@ function App() {
                     <TextField
                       {...params}
                       required={mealForm.guestIds.length === 0}
-                      label="Attending guests"
+                      label="Select attending guests"
                       size="small"
                       placeholder={mealForm.guestIds.length ? '' : 'Select guests'}
                       helperText={
