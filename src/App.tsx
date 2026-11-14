@@ -95,6 +95,12 @@ const compareGuests = (a: Attendee, b: Attendee) =>
   a.firstName.trim().localeCompare(b.firstName.trim(), undefined, { sensitivity: 'base' }) ||
   a.id.localeCompare(b.id)
 
+const countAgeGroups = (attendees: Attendee[]) => {
+  const counts: Record<AgeGroup, number> = { adult: 0, kid: 0 }
+  for (const attendee of attendees) counts[attendee.ageGroup] += 1
+  return counts
+}
+
 const derivedDietarySummary = (meal: Meal, guests: Attendee[]) => {
   if (meal.dietarySummary) return meal.dietarySummary
   const counts = new Map<string, number>()
@@ -447,11 +453,7 @@ function App() {
         : [],
     [selectedProject, selectedMeal, sortedEventAttendees],
   )
-  const ageGroupCounts = useMemo(() => {
-    const counts: Record<AgeGroup, number> = { adult: 0, kid: 0 }
-    for (const attendee of mealAttendees) counts[attendee.ageGroup] += 1
-    return counts
-  }, [mealAttendees])
+  const ageGroupCounts = useMemo(() => countAgeGroups(mealAttendees), [mealAttendees])
 
   const availableGuests = useMemo(
     () =>
@@ -1600,7 +1602,10 @@ function App() {
               {selectedProject.meals
                 .filter((meal) => !isPastMeal(meal))
                 .sort((a, b) => a.date.localeCompare(b.date) || (a.startTime || '00:00').localeCompare(b.startTime || '00:00'))
-                .map((meal) => (
+                .map((meal) => {
+                  const guests = selectedProject.attendees.filter((attendee) => meal.assignedAttendeeIds.includes(attendee.id))
+                  const counts = countAgeGroups(guests)
+                  return (
                   <Card key={meal.id} className="project-card" data-tour="event-meal-tile" sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
                     <CardActionArea onClick={() => openMeal(selectedProject.id, meal.id)} sx={{ p: 0, height: '100%', alignItems: 'stretch' }}>
                     <div className="meal-tile">
@@ -1614,7 +1619,7 @@ function App() {
                     </div>
                     <div className="meal-tile-stats">
                       <span>
-                        <strong>{meal.attendeeCount || meal.assignedAttendeeIds.length}</strong> guests
+                        <strong>{guests.length}</strong> {guests.length === 1 ? 'guest' : 'guests'} ({counts.adult} adults, {counts.kid} kids)
                       </span>
                       <span>
                         <strong>{meal.items.length}</strong> items
@@ -1624,7 +1629,8 @@ function App() {
                     </div>
                     </CardActionArea>
                   </Card>
-                ))}
+                  )
+                })}
             </div>
 
             <div className="section-header" style={{ marginTop: 12 }}>
