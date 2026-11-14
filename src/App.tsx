@@ -58,6 +58,25 @@ import { acceptLoadedProjects, loadProjects, persistProjects, usesSupabase, wait
 
 const isPhone = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 700px)').matches
 
+type AppView = 'dashboard' | 'project' | 'meal'
+
+const navigationUrl = (view: AppView, projectId: string | null, mealId: string | null) => {
+  const url = new URL(window.location.href)
+  url.pathname = '/'
+  url.searchParams.delete('event')
+  url.searchParams.delete('meal')
+  if (view !== 'dashboard' && projectId) url.searchParams.set('event', projectId)
+  if (view === 'meal' && mealId) url.searchParams.set('meal', mealId)
+  return url
+}
+
+const updateNavigationUrl = (view: AppView, projectId: string | null, mealId: string | null, replace = false) => {
+  const url = navigationUrl(view, projectId, mealId)
+  if (url.href === window.location.href) return
+  if (replace) window.history.replaceState(window.history.state, '', url)
+  else window.history.pushState(null, '', url)
+}
+
 const ageGroupOptions: AgeGroup[] = ['kid', 'adult']
 
 interface AttendeeDraft {
@@ -306,7 +325,7 @@ function App() {
   const [mealItemForm, setMealItemForm] = useState(defaultItemForm)
   const [projectPasswordInput, setProjectPasswordInput] = useState('')
   const [projectAccess, setProjectAccess] = useState<Record<string, boolean>>({})
-  const [view, setView] = useState<'dashboard' | 'project' | 'meal'>('dashboard')
+  const [view, setView] = useState<AppView>('dashboard')
   const [editForm, setEditForm] = useState<
     | { kind: 'event'; name: string; description: string }
     | { kind: 'meal'; title: string; date: string; startTime: string; location: string; category: MealCategory }
@@ -440,6 +459,8 @@ function App() {
       } else if (savedProjects[0]) {
         setSelectedProjectId(savedProjects[0].id)
       }
+      updateNavigationUrl(linkedProject ? (linkedMeal ? 'meal' : 'project') : 'dashboard',
+        linkedProject?.id ?? null, linkedMeal?.id ?? null, true)
     }
 
     void hydrate()
@@ -452,6 +473,42 @@ function App() {
   const editing = showCreateEventForm || showMealForm || showMealItemForm ||
     Boolean(draftAttendee || mealGuestDraft || editForm || itemEdit || guestEdit ||
       deleteTarget || guestRemoval || guestPickerOpen || pendingGuestIds.length)
+
+  useEffect(() => {
+    if (!hydrated) return
+    const onPopState = () => {
+      if (editing && !window.confirm('Leave this page? Unsaved edits will be discarded.')) {
+        updateNavigationUrl(view, selectedProjectId, selectedMealId)
+        return
+      }
+      const params = new URLSearchParams(window.location.search)
+      const project = projects.find((item) => item.id === params.get('event'))
+      const meal = project?.meals.find((item) => item.id === params.get('meal'))
+      const nextView: AppView = project ? (meal ? 'meal' : 'project') : 'dashboard'
+      setShowCreateEventForm(false)
+      setShowMealForm(false)
+      setShowMealItemForm(false)
+      setDraftAttendee(null)
+      setMealGuestDraft(null)
+      setEditForm(null)
+      setItemEdit(null)
+      setGuestEdit(null)
+      setDeleteTarget(null)
+      setGuestRemoval(null)
+      setGuestPickerOpen(false)
+      setPendingGuestIds([])
+      setProjectForm(defaultProjectForm)
+      setMealForm(defaultMealForm)
+      setMealItemForm(defaultItemForm)
+      setSelectedProjectId(project?.id ?? projects[0]?.id ?? null)
+      setSelectedMealId(meal?.id ?? null)
+      setView(nextView)
+      setProjectPasswordInput('')
+      updateNavigationUrl(nextView, project?.id ?? null, meal?.id ?? null, true)
+    }
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [hydrated, projects, editing, view, selectedProjectId, selectedMealId])
 
   useEffect(() => {
     if (!usesSupabase || !hydrated) return
@@ -492,10 +549,12 @@ function App() {
           setRefreshNotice('This event is no longer available.')
           setSelectedMealId(null)
           setView('dashboard')
+          updateNavigationUrl('dashboard', null, null, true)
         } else if (view === 'meal' && !project?.meals.some((meal) => meal.id === selectedMealId)) {
           setRefreshNotice('This meal is no longer available.')
           setSelectedMealId(null)
           setView('project')
+          updateNavigationUrl('project', project?.id ?? null, null, true)
         }
         setRefreshPending(false)
       } catch (error) {
@@ -577,6 +636,7 @@ function App() {
     setSelectedProjectId(projectId)
     setSelectedMealId(null)
     setView('project')
+    updateNavigationUrl('project', projectId, null)
     setProjectPasswordInput('')
   }
 
@@ -584,6 +644,7 @@ function App() {
     setSelectedProjectId(projectId)
     setSelectedMealId(mealId)
     setView('meal')
+    updateNavigationUrl('meal', projectId, mealId)
   }
 
   const createProject = () => {
@@ -612,6 +673,7 @@ function App() {
     setProjectForm(defaultProjectForm)
     setProjectPasswordInput('')
     setView('project')
+    updateNavigationUrl('project', newProject.id, null)
   }
 
   const startDraftAttendee = () => {
@@ -982,6 +1044,7 @@ function App() {
       setProjects((current) => current.filter((project) => project.id !== deleteTarget.projectId))
       setSelectedMealId(null)
       setView('dashboard')
+      updateNavigationUrl('dashboard', null, null, true)
     }
 
     if (deleteTarget.type === 'meal' && deleteTarget.projectId && deleteTarget.mealId) {
@@ -995,6 +1058,7 @@ function App() {
       if (selectedMealId === deleteTarget.mealId) {
         setSelectedMealId(null)
         setView('project')
+        updateNavigationUrl('project', deleteTarget.projectId, null, true)
       }
     }
 
@@ -1197,9 +1261,6 @@ function App() {
         {shareAnchor?.kind === 'event' && (
           <MenuItem onClick={() => {
             if (!selectedProject) return
-            const eventUrl = new URL('/', window.location.origin)
-            eventUrl.searchParams.set('event', selectedProject.id)
-            window.history.replaceState(window.history.state, '', eventUrl)
             setShareAnchor(null)
             setShowHomeScreenHelp(true)
           }}>
@@ -1744,7 +1805,11 @@ function App() {
               >
                 <span className="btn-label">Share</span>
               </Button>
-              <Button type="button" variant="outlined" color="primary" className="secondary-button" data-tour="nav-back" onClick={() => setView('dashboard')}>
+              <Button type="button" variant="outlined" color="primary" className="secondary-button" data-tour="nav-back" onClick={() => {
+                setSelectedMealId(null)
+                setView('dashboard')
+                updateNavigationUrl('dashboard', null, null)
+              }}>
                 ← Dashboard
               </Button>
             </div>
@@ -2285,7 +2350,11 @@ function App() {
               >
                 <span className="btn-label">Share</span>
               </Button>
-              <Button type="button" variant="outlined" color="primary" className="secondary-button" data-tour="nav-back" onClick={() => setView('project')}>
+              <Button type="button" variant="outlined" color="primary" className="secondary-button" data-tour="nav-back" onClick={() => {
+                setSelectedMealId(null)
+                setView('project')
+                updateNavigationUrl('project', selectedProject.id, null)
+              }}>
                 ← Event
               </Button>
             </div>

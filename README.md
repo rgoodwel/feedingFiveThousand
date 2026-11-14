@@ -59,6 +59,7 @@ The event sharing menu includes instructions for adding that event to an iPhone 
 Share previews use the event or meal name without an image; their layout depends on the messaging app.
 Event and meal previews are served by the `/s` rewrite in production.
 The preview page uses JavaScript to open the app so link-preview crawlers can read its event or meal title.
+The address updates as you navigate between the dashboard, events, and meals; browser Back and Forward follow that navigation.
 
 ## Security note
 
