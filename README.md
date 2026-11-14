@@ -55,7 +55,7 @@ npm run build
 
 The app's home-screen icons use `public/app-icon.svg`. If the artwork changes, regenerate
 `apple-touch-icon.png`, `icon-192.png`, and `icon-512.png` before deploying.
-The event sharing menu includes instructions for adding the app dashboard to an iPhone home screen through Safari.
+The event sharing menu includes instructions for adding that event to an iPhone home screen.
 Share previews use the event or meal name without an image; their layout depends on the messaging app.
 Event and meal previews are served by the `/s` rewrite in production.
 The preview page uses JavaScript to open the app so link-preview crawlers can read its event or meal title.

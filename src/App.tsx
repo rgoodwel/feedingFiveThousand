@@ -33,6 +33,7 @@ import CloseIcon from '@mui/icons-material/Close'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
+import IosShareIcon from '@mui/icons-material/IosShare'
 import QuestionMarkIcon from '@mui/icons-material/QuestionMark'
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
@@ -1195,6 +1196,10 @@ function App() {
         </MenuItem>
         {shareAnchor?.kind === 'event' && (
           <MenuItem onClick={() => {
+            if (!selectedProject) return
+            const eventUrl = new URL('/', window.location.origin)
+            eventUrl.searchParams.set('event', selectedProject.id)
+            window.history.replaceState(window.history.state, '', eventUrl)
             setShareAnchor(null)
             setShowHomeScreenHelp(true)
           }}>
@@ -1208,21 +1213,20 @@ function App() {
         <DialogTitle id="home-screen-help-title">Add to iPhone home screen</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Open the app homepage in Safari on your iPhone, then:
+            With this event open on your iPhone:
           </DialogContentText>
           <Box component="ol" sx={{ pl: 3, mb: 2 }}>
-            <li>Tap Safari&apos;s Share button (the square with an arrow).</li>
+            <li>
+              Tap the Share icon <IosShareIcon aria-label="Share" sx={{ fontSize: '1.2em', verticalAlign: 'text-bottom' }} /> in your browser&apos;s toolbar, usually at the top or bottom of the screen.
+            </li>
             <li>Scroll down and tap Add to Home Screen.</li>
             <li>Choose a name and tap Add.</li>
           </Box>
           <DialogContentText>
-            The shortcut opens the app dashboard. If you don&apos;t see Add to Home Screen, open the homepage in Safari first.
+            The shortcut opens this event. If you don&apos;t see the toolbar, tap or scroll the page to reveal it.
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
-          <Button component="a" href="/" target="_blank" rel="noopener noreferrer" variant="outlined">
-            Open app homepage
-          </Button>
           <Button onClick={() => setShowHomeScreenHelp(false)} variant="contained">Done</Button>
         </DialogActions>
       </Dialog>
