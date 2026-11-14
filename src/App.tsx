@@ -26,6 +26,7 @@ import TableContainer from '@mui/material/TableContainer'
 import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
 import AddIcon from '@mui/icons-material/Add'
+import AddToHomeScreenIcon from '@mui/icons-material/AddToHomeScreen'
 import CheckIcon from '@mui/icons-material/Check'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import CloseIcon from '@mui/icons-material/Close'
@@ -835,6 +836,7 @@ function App() {
 
   const [shareAnchor, setShareAnchor] = useState<{ el: HTMLElement; kind: 'event' | 'meal' } | null>(null)
   const [shareCopied, setShareCopied] = useState(false)
+  const [showHomeScreenHelp, setShowHomeScreenHelp] = useState(false)
 
   const shareLink = (kind: 'event' | 'meal') => {
     if (!selectedProject) return ''
@@ -1191,8 +1193,39 @@ function App() {
         <MenuItem onClick={copyShareLink}>
           <ContentCopyIcon fontSize="small" sx={{ mr: 1 }} /> Copy link
         </MenuItem>
+        {shareAnchor?.kind === 'event' && (
+          <MenuItem onClick={() => {
+            setShareAnchor(null)
+            setShowHomeScreenHelp(true)
+          }}>
+            <AddToHomeScreenIcon fontSize="small" sx={{ mr: 1 }} /> Add to iPhone home screen
+          </MenuItem>
+        )}
       </Menu>
       <Snackbar open={shareCopied} message="Link copied" autoHideDuration={1500} />
+
+      <Dialog open={showHomeScreenHelp} onClose={() => setShowHomeScreenHelp(false)} maxWidth="xs" fullWidth aria-labelledby="home-screen-help-title">
+        <DialogTitle id="home-screen-help-title">Add to iPhone home screen</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Open the app homepage in Safari on your iPhone, then:
+          </DialogContentText>
+          <Box component="ol" sx={{ pl: 3, mb: 2 }}>
+            <li>Tap Safari&apos;s Share button (the square with an arrow).</li>
+            <li>Scroll down and tap Add to Home Screen.</li>
+            <li>Choose a name and tap Add.</li>
+          </Box>
+          <DialogContentText>
+            The shortcut opens the app dashboard. If you don&apos;t see Add to Home Screen, open the homepage in Safari first.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
+          <Button component="a" href="/" target="_blank" rel="noopener noreferrer" variant="outlined">
+            Open app homepage
+          </Button>
+          <Button onClick={() => setShowHomeScreenHelp(false)} variant="contained">Done</Button>
+        </DialogActions>
+      </Dialog>
 
       {editForm && selectedProject && (
         <Dialog open onClose={() => setEditForm(null)} maxWidth="xs" fullWidth>
