@@ -1837,7 +1837,7 @@ function App() {
                       <Chip size="small" label={meal.category} className="meal-tile-chip" />
                     </div>
                     <div className="meal-date">
-                      {formatDate(meal.date)} • {formatTime(meal.startTime)}
+                      <span>📅 {formatDate(meal.date)}</span> • <span>🕒 {formatTime(meal.startTime)}</span>
                       {meal.location && <span className="meal-location"> • 📍 {meal.location}</span>}
                     </div>
                     <div className="meal-tile-stats">
