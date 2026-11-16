@@ -241,9 +241,7 @@ function ResponsibleField({ guests, mealGuestIds, value, onChange, required, pla
         setText(selected ? fullName(selected) : '')
       }}
       onBlur={() => setFocused(false)}
-      onInputChange={(_event, next, reason) => {
-        if (reason === 'input') setText(next)
-      }}
+      onInputChange={(_event, next) => setText(next)}
       onChange={(_event, guest) => onChange(guest?.id ?? '')}
       renderOption={(props, guest) => {
         const { key, ...rest } = props as typeof props & { key: string }
