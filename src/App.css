@@ -107,9 +107,18 @@
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.7fr) minmax(320px, 0.7fr);
-  gap: 24px;
-  align-items: start;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+.dashboard-create {
+  display: flex;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.dashboard-create .create-event-form {
+  width: 100%;
 }
 
 .detail-stack {
@@ -1254,6 +1263,10 @@ textarea {
 
 /* Phones: lists stay compact table rows; new-item/new-guest rows become a roomy form */
 @media (max-width: 700px) {
+  .dashboard-create .create-event-button {
+    width: 100%;
+  }
+
   .app-shell {
     overflow-x: hidden;
   }

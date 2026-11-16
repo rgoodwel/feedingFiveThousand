@@ -1653,62 +1653,18 @@ function App() {
 
       {view === 'dashboard' && (
         <main className="dashboard-grid">
-          <Paper className="panel" elevation={0} sx={{ p: 2 }}>
-            <div className="panel-header">
-              <div />
-            </div>
-
-            <div className="project-grid">
-              {projects.map((project) => {
-                const pastMeals = project.meals.filter((meal) => isPastMeal(meal)).length
-                const upcomingMeals = project.meals.filter(
-                  (meal) => !isPastMeal(meal),
-                ).length
-
-                return (
-                  <Card key={project.id} className="project-card" sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-                    <CardActionArea onClick={() => openProject(project.id)} sx={{ p: 1.5, height: '100%' }}>
-                      <Typography variant="h3" sx={{ fontSize: '1.15rem', mb: 1, mt: 0 }}>
-                        {project.name}
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1.5, minHeight: 40 }}>
-                        {project.description || 'No event description added yet.'}
-                      </Typography>
-                      <div className="event-card-footer">
-                        <div>
-                          <strong>{project.attendees.length}</strong>
-                          <span>Guests</span>
-                        </div>
-                        <div>
-                          <strong>{pastMeals}</strong>
-                          <span>Past meals</span>
-                        </div>
-                        <div>
-                          <strong>{upcomingMeals}</strong>
-                          <span>Upcoming meals</span>
-                        </div>
-                      </div>
-                    </CardActionArea>
-                  </Card>
-                )
-              })}
-            </div>
-          </Paper>
-
-          <Paper className="panel form-panel create-event-panel" elevation={0} sx={{ p: 2 }}>
+          <div className="dashboard-create">
             {!showCreateEventForm ? (
-              <div className="panel-header" style={{ justifyContent: 'flex-start' }}>
                 <Button
                   type="button"
                   variant="contained"
                   color="primary"
-                  className="primary-button"
+                  className="primary-button create-event-button"
                   startIcon={<AddIcon />}
                   onClick={() => setShowCreateEventForm(true)}
                 >
                   Create Event
                 </Button>
-              </div>
             ) : (
               <form
                 className="create-event-form"
@@ -1786,7 +1742,43 @@ function App() {
                 </div>
               </form>
             )}
-          </Paper>
+          </div>
+
+          <div className="project-grid">
+            {projects.map((project) => {
+              const pastMeals = project.meals.filter((meal) => isPastMeal(meal)).length
+              const upcomingMeals = project.meals.filter(
+                (meal) => !isPastMeal(meal),
+              ).length
+
+              return (
+                <Card key={project.id} className="project-card" sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+                  <CardActionArea onClick={() => openProject(project.id)} sx={{ p: 1.5, height: '100%' }}>
+                    <Typography variant="h3" sx={{ fontSize: '1.15rem', mb: 1, mt: 0 }}>
+                      {project.name}
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1.5, minHeight: 40 }}>
+                      {project.description || 'No event description added yet.'}
+                    </Typography>
+                    <div className="event-card-footer">
+                      <div>
+                        <strong>{project.attendees.length}</strong>
+                        <span>Guests</span>
+                      </div>
+                      <div>
+                        <strong>{pastMeals}</strong>
+                        <span>Past meals</span>
+                      </div>
+                      <div>
+                        <strong>{upcomingMeals}</strong>
+                        <span>Upcoming meals</span>
+                      </div>
+                    </div>
+                  </CardActionArea>
+                </Card>
+              )
+            })}
+          </div>
         </main>
       )}
 
