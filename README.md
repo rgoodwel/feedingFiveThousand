@@ -5,6 +5,7 @@ A device-agnostic group meal planning app for projects/events with reusable atte
 ## Features
 
 - Multiple projects/events in the same app
+- Dashboard events are ordered by their soonest upcoming meal; events without upcoming meals appear last
 - Independent meal tracking per project and meal
 - Project visibility modes:
   - fully public

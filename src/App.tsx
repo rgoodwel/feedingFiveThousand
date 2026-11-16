@@ -55,6 +55,7 @@ import {
   type FoodCategory,
 } from './data/sampleData'
 import { acceptLoadedProjects, loadProjects, persistProjects, usesSupabase, waitForPendingSaves } from './lib/projectService'
+import { isPastMeal, sortEventsByUpcomingMeal } from './lib/mealOrder'
 
 const isPhone = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 700px)').matches
 
@@ -1745,7 +1746,7 @@ function App() {
           </div>
 
           <div className="project-grid">
-            {projects.map((project) => {
+            {sortEventsByUpcomingMeal(projects).map((project) => {
               const pastMeals = project.meals.filter((meal) => isPastMeal(meal)).length
               const upcomingMeals = project.meals.filter(
                 (meal) => !isPastMeal(meal),
@@ -2760,13 +2761,6 @@ function formatTime(value: string) {
   if (!match) return value
   const hours = Number(match[1])
   return `${hours % 12 || 12}:${match[2]} ${hours < 12 ? 'AM' : 'PM'}`
-}
-
-function isPastMeal(meal: Meal) {
-  if (!meal.date) return false
-  // a meal is past once its start date and time have passed
-  const mealStart = new Date(`${meal.date}T${meal.startTime || '00:00'}:00`)
-  return mealStart < new Date()
 }
 
 function isProjectUnlocked(project: Project, projectAccess: Record<string, boolean>) {
