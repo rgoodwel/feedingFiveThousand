@@ -899,6 +899,25 @@ function App() {
   const [shareAnchor, setShareAnchor] = useState<{ el: HTMLElement; kind: 'event' | 'meal' } | null>(null)
   const [shareCopied, setShareCopied] = useState(false)
   const [showHomeScreenHelp, setShowHomeScreenHelp] = useState(false)
+  const [openingHomeScreenEvent, setOpeningHomeScreenEvent] = useState(false)
+  const [homeScreenLinkError, setHomeScreenLinkError] = useState(false)
+
+  const openHomeScreenEvent = async () => {
+    if (!selectedProject || openingHomeScreenEvent) return
+    if (editing && !window.confirm('Opening the event link will discard your current unsaved edit. Continue?')) return
+    setOpeningHomeScreenEvent(true)
+    setHomeScreenLinkError(false)
+    try {
+      await waitForPendingSaves()
+      const eventUrl = new URL('/', window.location.origin)
+      eventUrl.searchParams.set('event', selectedProject.id)
+      window.location.assign(eventUrl.href)
+    } catch (error) {
+      console.error('Unable to open the event link:', error)
+      setHomeScreenLinkError(true)
+      setOpeningHomeScreenEvent(false)
+    }
+  }
 
   const shareLink = (kind: 'event' | 'meal') => {
     if (!selectedProject) return ''
@@ -1261,6 +1280,7 @@ function App() {
           <MenuItem onClick={() => {
             if (!selectedProject) return
             setShareAnchor(null)
+            setHomeScreenLinkError(false)
             setShowHomeScreenHelp(true)
           }}>
             <AddToHomeScreenIcon fontSize="small" sx={{ mr: 1 }} /> Add to iPhone home screen
@@ -1273,9 +1293,10 @@ function App() {
         <DialogTitle id="home-screen-help-title">Add to iPhone home screen</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            With this event open on your iPhone:
+            To save a shortcut to this event on your iPhone:
           </DialogContentText>
           <Box component="ol" sx={{ pl: 3, mb: 2 }}>
+            <li>Tap Open event link below to load the event in a fresh page.</li>
             <li>
               Tap the Share icon <IosShareIcon aria-label="Share" sx={{ fontSize: '1.2em', verticalAlign: 'text-bottom' }} /> in your browser&apos;s toolbar, usually at the top or bottom of the screen.
             </li>
@@ -1283,11 +1304,19 @@ function App() {
             <li>Choose a name and tap Add.</li>
           </Box>
           <DialogContentText>
-            The shortcut opens this event. If you don&apos;t see the toolbar, tap or scroll the page to reveal it.
+            If you don&apos;t see the toolbar, tap or scroll the page to reveal it. Replace any existing shortcut that opens the wrong meal.
           </DialogContentText>
+          {homeScreenLinkError && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              Could not open the event link because changes could not be saved. Retry saving before continuing.
+            </Alert>
+          )}
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
           <Button onClick={() => setShowHomeScreenHelp(false)} variant="contained">Done</Button>
+          <Button onClick={() => void openHomeScreenEvent()} disabled={openingHomeScreenEvent} variant="outlined">
+            Open event link
+          </Button>
         </DialogActions>
       </Dialog>
 
