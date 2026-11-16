@@ -274,11 +274,13 @@ const NEW_GUEST_OPTION = '__new_guest__'
 const SELECT_ALL_OPTION = '__select_all__'
 const DONE_OPTION = '__done__'
 
-const courseGroups: { label: string; categories: FoodCategory[] }[] = [
-  { label: 'Starters', categories: ['drink', 'app'] },
-  { label: 'Mains', categories: ['main'] },
-  { label: 'Sides', categories: ['salad', 'side'] },
-  { label: 'Desserts', categories: ['dessert'] },
+const courseGroups: { label: string; category: FoodCategory }[] = [
+  { label: 'Drinks', category: 'drink' },
+  { label: 'Appetizers', category: 'app' },
+  { label: 'Salads', category: 'salad' },
+  { label: 'Mains', category: 'main' },
+  { label: 'Sides', category: 'side' },
+  { label: 'Desserts', category: 'dessert' },
 ]
 const foodCategoryOptions: FoodCategory[] = ['drink', 'app', 'salad', 'main', 'side', 'dessert']
 
@@ -2432,7 +2434,7 @@ function App() {
                   )}
 
                   {courseGroups.map((group) => {
-                    const groupItems = selectedMeal.items.filter((item) => group.categories.includes(item.category))
+                    const groupItems = selectedMeal.items.filter((item) => item.category === group.category)
                     if (groupItems.length === 0) return null
                     return (
                       <Fragment key={group.label}>

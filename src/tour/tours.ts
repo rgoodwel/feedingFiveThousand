@@ -63,7 +63,7 @@ export const tours: Record<TourView, DriveStep[]> = {
       popover: {
         title: 'Your menu',
         description:
-          'Items are grouped into Starters, Mains, Sides and Desserts. Tap the pencil on a row to edit or delete an item. Changing the category moves the item to the right group.',
+          'Items are grouped by category: Drinks, Appetizers, Salads, Mains, Sides and Desserts. Tap the pencil on a row to edit or delete an item. Changing the category moves the item to the right group.',
       },
     },
     {
