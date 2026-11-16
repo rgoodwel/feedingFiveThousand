@@ -28,7 +28,6 @@ import TableRow from '@mui/material/TableRow'
 import AddIcon from '@mui/icons-material/Add'
 import AddToHomeScreenIcon from '@mui/icons-material/AddToHomeScreen'
 import CheckIcon from '@mui/icons-material/Check'
-import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import CloseIcon from '@mui/icons-material/Close'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
@@ -2256,45 +2255,16 @@ function App() {
                     No past meals yet. Meals move here automatically once their date and time have passed.
                   </Typography>
                 ) : (
-                  <TableContainer id="past-meals-list">
-                    <Table size="small" className="items-table past-meals-table">
-                      <TableHead>
-                        <TableRow>
-                          <TableCell>Meal</TableCell>
-                          <TableCell sx={{ width: 190 }}>When</TableCell>
-                          <TableCell sx={{ width: 100 }}>Guests</TableCell>
-                          <TableCell sx={{ width: 100 }}>Items</TableCell>
-                          <TableCell sx={{ width: 40 }} />
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {pastMealList.map((meal) => (
-                          <TableRow
-                            key={meal.id}
-                            tabIndex={0}
-                            className="past-meal-table-row"
-                            onClick={() => openMeal(selectedProject.id, meal.id)}
-                            onKeyDown={(event) => event.key === 'Enter' && openMeal(selectedProject.id, meal.id)}
-                          >
-                            <TableCell data-label="Meal">
-                              <span className="past-meal-title">{meal.title}</span>
-                              <Chip size="small" label={meal.category} className="past-meal-chip" />
-                              {meal.location && <div className="meal-location">📍 {meal.location}</div>}
-                            </TableCell>
-                            <TableCell data-label="When">
-                              {formatDate(meal.date)}
-                              {meal.startTime ? ` · ${formatTime(meal.startTime)}` : ''}
-                            </TableCell>
-                            <TableCell data-label="Guests">{meal.assignedAttendeeIds.length}</TableCell>
-                            <TableCell data-label="Items">{meal.items.length}</TableCell>
-                            <TableCell data-actions="true" align="right">
-                              <ChevronRightIcon fontSize="small" className="past-meal-chevron" />
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
+                  <div id="past-meals-list" className="past-meal-grid">
+                    {pastMealList.map((meal) => (
+                      <Card key={meal.id} className="past-meal-card" elevation={0}>
+                        <CardActionArea className="past-meal-action" onClick={() => openMeal(selectedProject.id, meal.id)}>
+                          <span className="past-meal-title">{meal.title}</span>
+                          <span className="past-meal-meta">{formatDate(meal.date)}</span>
+                        </CardActionArea>
+                      </Card>
+                    ))}
+                  </div>
                 ))}
               </Paper>
             )
