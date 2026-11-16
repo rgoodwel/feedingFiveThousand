@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import { useTour } from './tour/useTour'
 import type { TourView } from './tour/tours'
 import Alert from '@mui/material/Alert'
@@ -58,6 +59,26 @@ import { acceptLoadedProjects, loadProjects, persistProjects, usesSupabase, wait
 const isPhone = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 700px)').matches
 
 type AppView = 'dashboard' | 'project' | 'meal'
+
+function PageBanner({ title, children, actions, tour, dashboard = false }: {
+  title: string
+  children?: ReactNode
+  actions?: ReactNode
+  tour?: string
+  dashboard?: boolean
+}) {
+  return (
+    <header className={`page-banner${dashboard ? ' page-banner-dashboard' : ''}`}>
+      <div className="page-banner-inner">
+        <div className="page-banner-content" data-tour={tour}>
+          {dashboard ? <h1>{title}</h1> : <h2>{title}</h2>}
+          {children}
+        </div>
+        {actions}
+      </div>
+    </header>
+  )
+}
 
 const navigationUrl = (view: AppView, projectId: string | null, mealId: string | null) => {
   const url = new URL(window.location.href)
@@ -1217,13 +1238,7 @@ function App() {
         </Alert>
       )}
       {view === 'dashboard' && (
-        <Box component="header" className="topbar" sx={{ px: 2.5, py: 1.75, mb: 2 }}>
-          <Box>
-            <Typography variant="h1" sx={{ fontSize: 'clamp(2rem, 3vw, 3rem)', letterSpacing: '-0.05em', m: 0 }}>
-              Feeding Five Thousand
-            </Typography>
-          </Box>
-
+        <PageBanner title="Feeding Five Thousand" dashboard actions={
           <Box className="topbar-actions" sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
             <Chip
               label={`Events ${projects.length}`}
@@ -1232,7 +1247,7 @@ function App() {
               sx={{ borderRadius: 999, fontWeight: 700 }}
             />
           </Box>
-        </Box>
+        } />
       )}
 
       {deleteTarget && (
@@ -1614,10 +1629,8 @@ function App() {
 
       {selectedProject && !currentProjectUnlocked && (view === 'project' || view === 'meal') && (
         <main className="detail-stack">
+          <PageBanner title={selectedProject.name} />
           <Paper className="lock-card" elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-            <Typography variant="h2" sx={{ m: 0, fontSize: '1.7rem' }}>
-              {selectedProject.name}
-            </Typography>
             <Typography variant="body1" sx={{ color: 'text.secondary', m: 0 }}>
               This event is protected. Enter the password to access the planning details.
             </Typography>
@@ -1779,35 +1792,7 @@ function App() {
 
       {view === 'project' && selectedProject && currentProjectUnlocked && (
         <main className="detail-stack">
-          <Paper className="panel" elevation={0} sx={{ p: 2 }}>
-            <div data-tour="event-header">
-            <div className="project-header-row">
-              <div>
-                <Typography variant="h2" sx={{ m: 0, fontSize: '1.7rem' }}>
-                  {selectedProject.name}
-                </Typography>
-              </div>
-            </div>
-            <div className="meal-header-metadata event-header-metrics">
-              <button type="button" onClick={() => scrollToEventSection(upcomingMealsRef.current)}>
-                {selectedProject.meals.filter((m) => !isPastMeal(m)).length} upcoming meals
-              </button>
-              <button type="button" onClick={() => {
-                setShowPastMeals(true)
-                scrollToEventSection(pastMealsRef.current)
-              }}>
-                {selectedProject.meals.filter((m) => isPastMeal(m)).length} past meals
-              </button>
-              <button type="button" onClick={() => {
-                setShowAttendees(true)
-                scrollToEventSection(eventGuestsRef.current)
-              }}>
-                {selectedProject.attendees.length} {selectedProject.attendees.length === 1 ? 'guest' : 'guests'} (
-                {selectedProject.attendees.filter((a) => a.ageGroup === 'adult').length} adults,{' '}
-                {selectedProject.attendees.filter((a) => a.ageGroup === 'kid').length} kids)
-              </button>
-            </div>
-            </div>
+          <PageBanner title={selectedProject.name} tour="event-header" actions={
             <div className="project-actions event-actions-bar">
               {tourButton}
               <Button
@@ -1841,7 +1826,27 @@ function App() {
                 ← Dashboard
               </Button>
             </div>
-          </Paper>
+          }>
+            <div className="meal-header-metadata event-header-metrics">
+              <button type="button" onClick={() => scrollToEventSection(upcomingMealsRef.current)}>
+                {selectedProject.meals.filter((m) => !isPastMeal(m)).length} upcoming meals
+              </button>
+              <button type="button" onClick={() => {
+                setShowPastMeals(true)
+                scrollToEventSection(pastMealsRef.current)
+              }}>
+                {selectedProject.meals.filter((m) => isPastMeal(m)).length} past meals
+              </button>
+              <button type="button" onClick={() => {
+                setShowAttendees(true)
+                scrollToEventSection(eventGuestsRef.current)
+              }}>
+                {selectedProject.attendees.length} {selectedProject.attendees.length === 1 ? 'guest' : 'guests'} (
+                {selectedProject.attendees.filter((a) => a.ageGroup === 'adult').length} adults,{' '}
+                {selectedProject.attendees.filter((a) => a.ageGroup === 'kid').length} kids)
+              </button>
+            </div>
+          </PageBanner>
 
           <Paper ref={upcomingMealsRef} className="panel open-section upcoming-meals-section event-section-target" elevation={0} sx={{ p: 2 }}>
             <Typography variant="subtitle1" className="section-title" sx={{ mb: 0.5 }}>
@@ -2303,27 +2308,7 @@ function App() {
 
       {view === 'meal' && selectedProject && selectedMeal && (
         <main className="detail-stack">
-          <Paper className="panel compact-meal-header-panel" elevation={0} sx={{ p: 2 }}>
-            <div className="meal-header-row" data-tour="meal-header">
-              <div className="meal-header-copy">
-                <div className="meal-header-title-row">
-                  <h2>{selectedMeal.title}</h2>
-                </div>
-                <div className="meal-header-metadata">
-                  <span>{formatDate(selectedMeal.date) || 'No date'}</span>
-                  <span>{formatTime(selectedMeal.startTime) || 'No time'}</span>
-                  {selectedMeal.location && <span>📍 {selectedMeal.location}</span>}
-                  <span>{selectedMeal.category}</span>
-                  <span>
-                    {mealAttendees.length} {mealAttendees.length === 1 ? 'guest' : 'guests'} ({ageGroupCounts.adult} adults,{' '}
-                    {ageGroupCounts.kid} kids)
-                  </span>
-                </div>
-                {derivedDietarySummary(selectedMeal, selectedProject.attendees) && (
-                  <div className="meal-header-notes">{derivedDietarySummary(selectedMeal, selectedProject.attendees)}</div>
-                )}
-              </div>
-            </div>
+          <PageBanner title={selectedMeal.title} tour="meal-header" actions={
             <div className="project-actions event-actions-bar">
               {tourButton}
               <Button
@@ -2357,7 +2342,21 @@ function App() {
                 ← Event
               </Button>
             </div>
-          </Paper>
+          }>
+            <div className="meal-header-metadata">
+              <span>{formatDate(selectedMeal.date) || 'No date'}</span>
+              <span>{formatTime(selectedMeal.startTime) || 'No time'}</span>
+              {selectedMeal.location && <span>📍 {selectedMeal.location}</span>}
+              <span>{selectedMeal.category}</span>
+              <span>
+                {mealAttendees.length} {mealAttendees.length === 1 ? 'guest' : 'guests'} ({ageGroupCounts.adult} adults,{' '}
+                {ageGroupCounts.kid} kids)
+              </span>
+            </div>
+            {derivedDietarySummary(selectedMeal, selectedProject.attendees) && (
+              <div className="meal-header-notes">{derivedDietarySummary(selectedMeal, selectedProject.attendees)}</div>
+            )}
+          </PageBanner>
 
           <Paper className="panel open-section" elevation={0} sx={{ p: 2 }}>
             <Typography variant="subtitle1" className="section-title" sx={{ mb: 0.5 }}>
