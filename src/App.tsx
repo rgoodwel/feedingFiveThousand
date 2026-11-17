@@ -2337,8 +2337,8 @@ function App() {
             </div>
           }>
             <div className="meal-header-metadata">
-              <span>{formatDate(selectedMeal.date) || 'No date'}</span>
-              <span>{formatTime(selectedMeal.startTime) || 'No time'}</span>
+              <span>📅 {formatDate(selectedMeal.date) || 'No date'}</span>
+              <span>🕒 {formatTime(selectedMeal.startTime) || 'No time'}</span>
               {selectedMeal.location && <span>📍 {selectedMeal.location}</span>}
               <span>{selectedMeal.category}</span>
               <span>
