@@ -698,7 +698,7 @@ function App() {
   }
 
   const startDraftAttendee = () => {
-    setDraftAttendee({ firstName: '', lastName: '', ageGroup: '', dietaryText: '' })
+    setDraftAttendee({ firstName: '', lastName: '', ageGroup: 'adult', dietaryText: 'none' })
   }
 
   const saveDraftAttendee = () => {
@@ -2167,11 +2167,7 @@ function App() {
                             onChange={(event) =>
                               setDraftAttendee((current) => current && { ...current, ageGroup: event.target.value as AgeGroup })
                             }
-                            slotProps={{ ...inlineFieldProps.slotProps, select: { displayEmpty: true } }}
                           >
-                            <MenuItem value="" disabled>
-                              Select…
-                            </MenuItem>
                             {ageGroupOptions.map((option) => (
                               <MenuItem key={option} value={option}>
                                 {option}
@@ -2581,11 +2577,7 @@ function App() {
                           onChange={(event) =>
                             setMealGuestDraft((c) => c && { ...c, ageGroup: event.target.value as AgeGroup })
                           }
-                          slotProps={{ ...inlineFieldProps.slotProps, select: { displayEmpty: true } }}
                         >
-                          <MenuItem value="" disabled>
-                            Select…
-                          </MenuItem>
                           {ageGroupOptions.map((option) => (
                             <MenuItem key={option} value={option}>
                               {option}
@@ -2630,7 +2622,7 @@ function App() {
                           onChange={(event) => {
                             const value = event.target.value as unknown as string[]
                             if (value.includes(NEW_GUEST_OPTION)) {
-                              setMealGuestDraft({ firstName: '', lastName: '', ageGroup: '', dietaryText: '' })
+                              setMealGuestDraft({ firstName: '', lastName: '', ageGroup: 'adult', dietaryText: 'none' })
                               closeGuestPicker()
                             } else if (value.includes(DONE_OPTION)) {
                               if (pendingGuestIds.length > 0) {
