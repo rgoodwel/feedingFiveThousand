@@ -54,6 +54,12 @@ npm run dev -- --host 0.0.0.0
 npm run build
 ```
 
+The public [Privacy Policy](public/privacy-policy.html) and
+[Terms & Conditions](public/terms-and-conditions.html) are available at
+`/privacy-policy.html` and `/terms-and-conditions.html` after deployment.
+Review their content and contact information before publication and update the
+SMS terms when SMS becomes available. The pages do not enable messaging.
+
 The app's home-screen icons use `public/app-icon.svg`. If the artwork changes, regenerate
 `apple-touch-icon.png`, `icon-192.png`, and `icon-512.png` before deploying.
 The event sharing menu includes instructions for adding that event to an iPhone home screen.
