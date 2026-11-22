@@ -2739,6 +2739,11 @@ function App() {
         </main>
       )}
 
+      <footer className="legal-links">
+        <a href="/privacy-policy.html">Privacy Policy</a>
+        <span aria-hidden="true"> · </span>
+        <a href="/terms-and-conditions.html">Terms &amp; Conditions</a>
+      </footer>
     </div>
   )
 }

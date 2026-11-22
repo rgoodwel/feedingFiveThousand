@@ -1917,3 +1917,12 @@ textarea {
     background: transparent;
   }
 }
+.legal-links {
+  padding: 1.5rem;
+  text-align: center;
+  font-size: 0.875rem;
+}
+
+.legal-links a {
+  color: #1f3d5c;
+}
